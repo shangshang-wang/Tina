@@ -49,7 +49,6 @@ Notably, the cost of reproducing the best Tina checkpoint stands at only \$9, an
   <img 
     src="assets/cost.png" 
     alt="Cost Breakdown" 
-    height="300" 
     style="max-width: 50%; height: auto;">
     </div>
 
@@ -88,8 +87,7 @@ mamba create -n tina_eval python=3.11 -y && mamba activate tina_eval
   <img 
     src="assets/ablation.png" 
     alt="Ablation"
-    height="300" 
-    style="max-width: 40%; height: auto;">
+    style="max-width: 50%; height: auto;">
     </div>
 
 After that, we have the following file structure in the `CKPT_DIR` directory.
@@ -114,8 +112,7 @@ CKPT_DIR/
   <img 
     src="assets/baseline_eval.png" 
     alt="Baseline Re-evaluation"
-    height="300" 
-    style="max-width: 40%; height: auto;">
+    style="max-width: 30%; height: auto;">
     </div>
 
 * Evaluate post-trained models: `./scripts/training/post_train_eval_local.sh`
@@ -124,8 +121,7 @@ CKPT_DIR/
   <img 
     src="assets/tina_eval.png" 
     alt="Tina Evaluation" 
-    height="300" 
-    style="max-width: 60%; height: auto;">
+    style="max-width: 40%; height: auto;">
     </div>
 
 ## Acknowledgements
