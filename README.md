@@ -17,3 +17,118 @@
     onmouseout="this.style.transform='scale(1)'">
   </a>
 </div>
+
+<div align="center">
+
+[![Github](https://img.shields.io/badge/Tina-000000?style=for-the-badge&logo=github&logoColor=000&logoColor=white)](https://github.com/shangshang-wang/Tina)
+[![Website](https://img.shields.io/badge/Notion-%23000000.svg?style=for-the-badge&logo=semanticweb&logoColor=white)](https://shangshangwang.notion.site/tina) 
+[![Hugging Face Collection](https://img.shields.io/badge/Tina_Yi-fcd022?style=for-the-badge&logo=huggingface&logoColor=000&labelColor)](https://huggingface.co/Tina-Yi)
+[![Weights and Biases](https://img.shields.io/badge/Tina-fcd022?style=for-the-badge&logo=weightsandbiases&logoColor=000&labelColor)](https://wandb.ai/upup-ashton-wang-usc/Tina)
+
+</div>
+
+## Overview
+
+This repository contains the code for the Tina project, accompanying the paper Tina: Tiny Reasoning Models via LoRA. 
+We in this project try to answer the question "How cost-effectively can one perform reinforcement learning to efficiently instill reasoning abilities in language models?"
+Specifically, we explore enhancing reasoning capabilities in tiny language models with low-rank adaptation during reinforcement learning.
+
+<div style="text-align: center;">
+  <img 
+    src="assets/overall_comparison.png" 
+    alt="Overall Comparison" 
+    width="1000" 
+    style="max-width: 100%; height: auto;"> 
+    </div>
+
+We show that our Tina models achieve performance competitive with, and in some cases even superior to, SOTA baseline models built on the same base model with full-parameter training.
+In particular, the best Tina model achieves a >20% performance increase and 43.33% Pass@1 accuracy on AIME24. 
+Notably, the cost of reproducing the best Tina checkpoint stands at only \$9, and of reproducing all our experiments from scratch at \$526.
+
+<div style="text-align: center;">
+  <img 
+    src="assets/cost.png" 
+    alt="Cost Breakdown" 
+    height="300" 
+    style="max-width: 50%; height: auto;">
+    </div>
+
+
+## Quick Start
+
+### File Setup
+
+* `./scripts/set/set_vars.sh`: contain the main env vars we use, change the path (marked with a TODO sign) to align with your own setting.
+* `./recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/`: contain the recipes for each experiment in this project, change the HF hub id (marked with a TODO sign) to align with your own setting.
+* `./tina/config.py`: contain the main configurations for this project, set default values here.
+* `./tina/utils/constant.py`: contain the main datasets for each experiment in this project.
+
+### Env Setup
+
+Run the following commands to install the dependencies.
+```bash
+conda update -n base -c defaults conda -y
+conda install -n base -c conda-forge mamba -y
+
+mamba create -n tina python=3.10 -y && mamba activate tina
+./scripts/set/set_env.sh && mamba deactivate
+
+mamba create -n tina_eval python=3.11 -y && mamba activate tina_eval
+./scripts/set/set_env_eval.sh && mamba deactivate
+
+# download the pre-trained models to the `CKPT_DIR` directory.
+./scripts/set/prepare.sh
+```
+
+### Training & Evaluation
+
+* LoRA-based RL with GRPO: `./scripts/training/post_train_grpo.sh`
+
+<div style="text-align: center;">
+  <img 
+    src="assets/ablation.png" 
+    alt="Ablation"
+    height="300" 
+    style="max-width: 40%; height: auto;">
+    </div>
+
+After that, we have the following file structure in the `CKPT_DIR` directory.
+```bash
+CKPT_DIR/
+│
+├── models/
+│   ├── DeepSeek-R1-Distill-Qwen-1.5B/
+│   │   └── base/ # pre-trained models 
+│   │   └── grpo_PT_DATASET_I/ # post-trained models via GRPO using PT_DATASET_I
+│   │   │   └── checkpoint-i/ # we should keep checkpoints during post-training in a stepwise manner
+│   │   │   └── ...
+│   │   └── grpo_PT_DATASET_II/ # post-trained models via GRPO using PT_DATASET_II
+│   │   │   └── checkpoint-i/
+│   │   │   └── ...
+│   │   └── ...
+```
+
+* Re-evaluate baseline models: `./scripts/training/post_train_eval_baselines.sh`
+
+<div style="text-align: center;">
+  <img 
+    src="assets/baseline_eval.png" 
+    alt="Baseline Re-evaluation"
+    height="300" 
+    style="max-width: 40%; height: auto;">
+    </div>
+
+* Evaluate post-trained models: `./scripts/training/post_train_eval_local.sh`
+
+<div style="text-align: center;">
+  <img 
+    src="assets/tina_eval.png" 
+    alt="Tina Evaluation" 
+    height="300" 
+    style="max-width: 60%; height: auto;">
+    </div>
+
+## Acknowledgements
+
+We thank Huggingface to open source the amazing [open-r1](https://github.com/huggingface/open-r1/tree/7041fbc9d65b6f1832db727961e8282243f8f82a) project, which is the starting codebase of our Tina project. 
+We also appreciate all researchers releasing their open-source reasoning datasets, including [open-r1/OpenR1-Math-220k](https://huggingface.co/datasets/open-r1/OpenR1-Math-220k), [bethgelab/CuratedThoughts](https://huggingface.co/datasets/bethgelab/CuratedThoughts), [agentica-org/DeepScaleR-Preview-Dataset](https://huggingface.co/datasets/agentica-org/DeepScaleR-Preview-Dataset), [RUC-AIBOX/STILL-3-Preview-RL-Data](https://huggingface.co/datasets/RUC-AIBOX/STILL-3-Preview-RL-Data), [knoveleng/open-rs](https://huggingface.co/datasets/knoveleng/open-rs), [knoveleng/open-s1](https://huggingface.co/datasets/knoveleng/open-s1), and [GAIR/LIMR](https://huggingface.co/datasets/GAIR/LIMR), which are used for our training.
