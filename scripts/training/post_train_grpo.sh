@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-MAMBA_ENV="resee"
+MAMBA_ENV="tina"
 eval "$(mamba shell hook --shell bash)" && mamba activate "${MAMBA_ENV}"
 echo "START TIME: $(date)"
 echo "PYTHON ENV: $(which python)"

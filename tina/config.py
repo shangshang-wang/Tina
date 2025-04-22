@@ -6,8 +6,8 @@ from typing import Literal
 @dataclass
 class ModelPTConfig:
     # //*******Model post-training configs*******//
-    model_post_train_type: Literal["grpo", "sft"] = field(default="sft")
-    model_post_train_dataset_name: str = field(default="r1_rationale_s1")
+    model_post_train_type: Literal["grpo", "sft"] = field(default="grpo")
+    model_post_train_dataset_name: str = field(default="curated_deepscaler")
     model_post_train_dataset_config: str | None = field(default=None)
 
     rl_post_train_reward_funcs: list[str] = field(default_factory=lambda: ["accuracy", "format"])
