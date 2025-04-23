@@ -133,3 +133,16 @@ We also appreciate all researchers releasing their open-source reasoning dataset
 
 *Hi, I’m Tina — an INTJ who’s all about getting to the essence of things. I study reasoning models because I’m fascinated by how structured thinking and logic can emerge from data. Outside of that, I recharge with movies, music, and the occasional gaming session. I believe in strategic effort: minimal input, maximum impact — whether it’s in research or everyday life, I’m always looking for the most efficient path to meaningful results.*
 
+## Citation
+
+```cite
+@misc{wang2025tinatinyreasoningmodels,
+      title={Tina: Tiny Reasoning Models via LoRA}, 
+      author={Shangshang Wang and Julian Asilis and Ömer Faruk Akgül and Enes Burak Bilgin and Ollie Liu and Willie Neiswanger},
+      year={2025},
+      eprint={2504.15777},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2504.15777}, 
+}
+```
