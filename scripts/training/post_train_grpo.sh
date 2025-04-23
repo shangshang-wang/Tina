@@ -38,7 +38,7 @@ DATASET_NAME="curated_deepscaler"
 #DATASET_NAME="curated_limr_tiny_rank_ablation"
 #DATASET_NAME="curated_open_rs3_drgrpo_ablation"
 
-PY_SCRIPT="./resee/post_train_hf/grpo.py"
+PY_SCRIPT="./tina/post_train_hf/grpo.py"
 PY_CONFIG="./recipes/${MODEL_NAME}/grpo/model_${DATASET_NAME}.yaml"
 ACCELERATE_DS_CONFIG="./recipes/accelerate_ds_cfgs/ds_zero2.yaml"
 

@@ -1,4 +1,4 @@
-# check ./resee/utils/constant.py
+# check ./tina/utils/constant.py
 model_post_train_dataset_name: curated_limr_small_lr_ablation
 model_post_train_type: grpo
 rl_post_train_reward_funcs:

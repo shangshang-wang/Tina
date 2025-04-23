@@ -28,7 +28,7 @@ def main():
     pt_args, training_args, model_args = parser.parse_args_and_config()
     set_seed(training_args.seed)
 
-    os.environ["WANDB_PROJECT"] = "resee_model_post_training"
+    os.environ["WANDB_PROJECT"] = "tina_model_post_training"
 
     ################
     # Set up logging

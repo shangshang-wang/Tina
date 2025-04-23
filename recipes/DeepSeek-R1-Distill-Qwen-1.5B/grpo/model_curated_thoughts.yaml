@@ -1,4 +1,4 @@
-# check ./resee/utils/constant.py
+# check ./tina/utils/constant.py
 model_post_train_dataset_name: curated_thoughts
 model_post_train_dataset_config: OpenThoughts-114k-math-default
 model_post_train_type: grpo
