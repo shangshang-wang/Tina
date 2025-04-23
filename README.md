@@ -29,7 +29,7 @@
 
 ## Overview
 
-This repository contains the code for the Tina project, accompanying the paper Tina: Tiny Reasoning Models via LoRA. 
+This repository contains the code for the Tina project, accompanying the paper [Tina: Tiny Reasoning Models via LoRA](https://arxiv.org/abs/2504.15777). 
 We in this project try to answer the question "How cost-effectively can one perform reinforcement learning to efficiently instill reasoning abilities in language models?"
 Specifically, we explore enhancing reasoning capabilities in tiny language models with low-rank adaptation during reinforcement learning.
 
