@@ -11,7 +11,7 @@ class ModelPTConfig:
     model_post_train_dataset_config: str | None = field(default=None)
 
     rl_post_train_reward_funcs: list[str] = field(default_factory=lambda: ["accuracy", "format"])
-    rl_post_train_reward_weights: list[str] = field(default_factory=lambda: [2.0, 1.0])
+    rl_post_train_reward_weights: list[float] = field(default_factory=lambda: [2.0, 1.0])
     cosine_min_value_wrong: float = field(default=0.0)
     cosine_max_value_wrong: float = field(default=-0.5)
     cosine_min_value_correct: float = field(default=0.5)
