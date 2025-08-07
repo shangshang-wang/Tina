@@ -81,7 +81,7 @@ mamba create -n tina_eval python=3.11 -y && mamba activate tina_eval
 
 ### Training & Evaluation
 
-* LoRA-based RL with GRPO: `./scripts/training/post_train_grpo.sh`
+* LoRA-based RL with GRPO: `./scripts/train/post_train_model_grpo.sh`
 
 <div style="text-align: center;">
   <img 
@@ -106,7 +106,7 @@ CKPT_DIR/
 │   │   └── ...
 ```
 
-* Re-evaluate baseline models: `./scripts/training/post_train_eval_baselines.sh`
+* Re-evaluate baseline models: `./scripts/eval/eval_baselines.sh`
 
 <div style="text-align: center;">
   <img 
@@ -115,7 +115,7 @@ CKPT_DIR/
     style="max-width: 30%; height: auto;">
     </div>
 
-* Evaluate post-trained models: `./scripts/training/post_train_eval_local.sh`
+* Evaluate post-trained models: `./scripts/eval/eval_post_train.sh`
 
 <div style="text-align: center;">
   <img 
