@@ -1,9 +1,11 @@
 import datasets
 from datasets import Dataset, load_dataset
 from datetime import datetime
+import json
 import logging
 import os
 from peft import get_peft_model, LoraConfig, TaskType
+import random
 import sys
 import torch
 import transformers
@@ -16,10 +18,19 @@ from tina.post_train_hf.grpo_config import GRPOConfig # use this new one for Dr.
 
 from tina.config import ModelPTConfig
 from tina.post_train_hf.callback import FixedPromptEvaluationCallback, PushToHubRevisionCallback, GradientClippingLoggerCallback
-from tina.post_train_hf.preprocess import make_conv_for_grpo
-from tina.post_train_hf.rewards import accuracy_reward, format_reward, tag_count_reward, len_reward, reasoning_steps_reward, get_cosine_scaled_reward, get_repetition_penalty_reward
+from tina.post_train_hf.preprocess import make_conv_for_grpo, make_conv_for_grpo_l1
+from tina.post_train_hf.rewards import (
+    accuracy_reward,
+    format_reward,
+    tag_count_reward,
+    len_reward,
+    len_reward_l1_exact,
+    len_reward_l1_max,
+    reasoning_steps_reward,
+    get_cosine_scaled_reward,
+    get_repetition_penalty_reward)
 from tina.utils.chat_template import DEFAULT_CHAT_TEMPLATE, REASON_CHAT_TEMPLATE
-from tina.utils.constant import RL_POST_TRAIN_DATASET_MAP
+from tina.utils.constant import RL_POST_TRAIN_CONFIG_MAP
 from tina.utils.prompt import OPEN_R1_SYSTEM_PROMPT, OPEN_RS_SYSTEM_PROMPT
 
 
@@ -28,7 +39,7 @@ def main():
     pt_args, training_args, model_args = parser.parse_args_and_config()
     set_seed(training_args.seed)
 
-    os.environ["WANDB_PROJECT"] = "tina_model_post_training"
+    os.environ["WANDB_PROJECT"] = "Tina_train_model"
 
     ################
     # Set up logging
@@ -87,7 +98,7 @@ def main():
         tokenizer.pad_token = "<|fim_pad|>"
     tokenizer.chat_template = REASON_CHAT_TEMPLATE
 
-    model_post_train_dataset_name = RL_POST_TRAIN_DATASET_MAP[pt_args.model_post_train_dataset_name]
+    model_post_train_dataset_name = RL_POST_TRAIN_CONFIG_MAP[pt_args.model_post_train_dataset_name]
     if pt_args.model_post_train_dataset_config is not None:
         train_dataset = load_dataset(model_post_train_dataset_name, split="train", name=pt_args.model_post_train_dataset_config)
     else:
@@ -120,11 +131,37 @@ def main():
 
         # Apply the transformation to the entire dataset
         train_dataset = train_dataset.map(wrap_in_math)
+    elif "2thought" in pt_args.model_post_train_dataset_name:
+        train_dataset = train_dataset.rename_column('messages', 'problem')
+        train_dataset = train_dataset.rename_column('verification_info', 'solution')
+
+        def extract_problem(example):
+            problem = example['problem'][0]["content"]
+            return {"problem": problem}
+
+        def extract_solution(example):
+            solution = json.loads(example['solution'])
+            solution = solution["answer"]["value"]
+            return {"solution": f"${solution}$"}
+
+        # Apply the transformation to the entire dataset
+        train_dataset = train_dataset.map(extract_problem)
+        train_dataset = train_dataset.map(extract_solution)
+
 
     SYSTEM_PROMPT = OPEN_RS_SYSTEM_PROMPT if "open-rs" in model_post_train_dataset_name else OPEN_R1_SYSTEM_PROMPT
-    train_dataset = train_dataset.map(
-        make_conv_for_grpo,
-        fn_kwargs={"system_prompt": SYSTEM_PROMPT})
+
+    if "l1" in pt_args.model_post_train_dataset_name:
+        # uniformly sample a target length between 100 and 4000
+        min_length = 100
+        max_length = 4000
+        train_dataset = train_dataset.map(
+            make_conv_for_grpo_l1,
+            fn_kwargs={"system_prompt": SYSTEM_PROMPT, "min_length": min_length, "max_length": max_length})
+    else:
+        train_dataset = train_dataset.map(
+            make_conv_for_grpo,
+            fn_kwargs={"system_prompt": SYSTEM_PROMPT})
 
     ######################
     # Initialize the model
@@ -157,6 +194,8 @@ def main():
         "format": format_reward,
         "tag_count": tag_count_reward,
         "length": len_reward,
+        "length_l1_exact": len_reward_l1_exact,
+        "length_l1_max": len_reward_l1_max,
         "reasoning_steps": reasoning_steps_reward,
         "cosine": get_cosine_scaled_reward(
             min_value_wrong=pt_args.cosine_min_value_wrong,

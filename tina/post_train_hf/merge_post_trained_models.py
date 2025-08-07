@@ -8,8 +8,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 def argparser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="DeepSeek-R1-Distill-Qwen-1.5B")
-    parser.add_argument("--adapter_type", type=str, default="grpo_curated_open_r1")
+    parser.add_argument("--adapter_type", type=str, default="grpo_open_r1")
     parser.add_argument("--ckpt", type=str, default="checkpoint-500")
+
     return parser.parse_args()
 
 
@@ -30,7 +31,7 @@ if __name__ == "__main__":
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_name_or_path,
         torch_dtype=torch.bfloat16,
-        device_map="auto") # Automatically distributes across available GPUs
+        device_map="auto")
 
     model = PeftModel.from_pretrained(base_model, adapter_model_name_or_path)
     model = model.merge_and_unload()

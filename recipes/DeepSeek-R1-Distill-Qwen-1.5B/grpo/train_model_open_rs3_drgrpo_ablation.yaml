@@ -1,5 +1,5 @@
-# check ./tina/utils/constant.py
-model_post_train_dataset_name: curated_open_rs3
+# check ./tina/config.py
+model_post_train_dataset_name: open_rs3_drgrpo_ablation
 model_post_train_type: grpo
 rl_post_train_reward_funcs:
 - format
@@ -27,6 +27,7 @@ lora_target_modules:
 
 
 # GRPO trainer configs from trl
+scale_reward: false # use Dr. GRPO's normalization
 bf16: true
 use_vllm: true
 vllm_device: cuda:0
@@ -36,15 +37,14 @@ gradient_accumulation_steps: 4
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
+push_to_hub: false # set as false on purpose
+hub_strategy: every_save
+hub_private_repo: true
+hub_model_id: upup-ashton-wang # TODO
 log_level: info
 logging_first_step: true
 logging_steps: 1
 logging_strategy: steps
-push_to_hub: false
-hub_strategy: every_save
-hub_private_repo: true
-hub_model_id: TODO
-
 learning_rate: 1.0e-06
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:

@@ -16,6 +16,17 @@ i.e., <think> reasoning process here </think> <answer> answer here </answer>.
 Note that respond by English, NOT use other languages.
 """
 
+
+# borrowed from deepseek r1
+SAE_FINE_TUNE_SYSTEM_PROMPT = """
+A conversation between User and Assistant. The user asks a question, and the Assistant solves it.
+The assistant first thinks about the reasoning process in the mind and then provides the user
+with the answer. The reasoning process and answer are enclosed within <think> </think> and
+<answer> </answer> tags, respectively, i.e., <think> reasoning process here </think>
+<answer> answer here </answer>.
+"""
+
+
 # the first question from aime 2024
 FIXED_PROMPT_FOR_EVALUATION = """
 Every morning Aya goes for a $9$-kilometer-long walk and stops at a coffee shop afterwards.

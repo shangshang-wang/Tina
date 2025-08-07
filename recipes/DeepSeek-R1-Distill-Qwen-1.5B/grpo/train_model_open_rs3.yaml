@@ -1,22 +1,12 @@
-# check ./tina/utils/constant.py
-model_post_train_dataset_name: curated_open_r1
+# check ./tina/config.py
+model_post_train_dataset_name: open_rs3
 model_post_train_type: grpo
 rl_post_train_reward_funcs:
-- accuracy
 - format
-- tag_count
-- length
-- reasoning_steps
 - cosine
-- repetition_penalty
 rl_post_train_reward_weights:
 - 1.0
-- 1.0
-- 1.0
-- 1.0
-- 1.0
-- 1.0
-- 1.0
+- 2.0
 
 
 # Model configs from trl
@@ -41,6 +31,7 @@ bf16: true
 use_vllm: true
 vllm_device: cuda:0
 vllm_gpu_memory_utilization: 0.4
+vllm_max_model_len: 4608
 gradient_accumulation_steps: 4
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
@@ -49,10 +40,10 @@ log_level: info
 logging_first_step: true
 logging_steps: 1
 logging_strategy: steps
-push_to_hub: false
+push_to_hub: false # set as false on purpose
 hub_strategy: every_save
 hub_private_repo: true
-hub_model_id: TODO
+hub_model_id: upup-ashton-wang # TODO
 
 learning_rate: 1.0e-06
 lr_scheduler_type: cosine_with_min_lr
@@ -60,15 +51,16 @@ lr_scheduler_kwargs:
   min_lr_rate: 0.1
 max_prompt_length: 512
 max_completion_length: 3584
-num_generations: 8
+max_steps: 1500 # use 1500 for lr scheduler but stop at 850 steps
+num_generations: 6
 num_train_epochs: 1
 overwrite_output_dir: true
-per_device_train_batch_size: 8
+per_device_train_batch_size: 6
 report_to:
 - wandb
 
 save_strategy: steps
-save_steps: 100
+save_steps: 50
 save_total_limit: 100
 
 seed: 42

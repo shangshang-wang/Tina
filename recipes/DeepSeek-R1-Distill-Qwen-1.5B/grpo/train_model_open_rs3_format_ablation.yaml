@@ -1,12 +1,18 @@
-# check ./tina/utils/constant.py
-model_post_train_dataset_name: curated_open_rs2
+# check ./tina/config.py
+model_post_train_dataset_name: open_rs3_format_ablation
 model_post_train_type: grpo
 rl_post_train_reward_funcs:
 - format
-- accuracy
+- tag_count
+- length
+- reasoning_steps
+- repetition_penalty
 rl_post_train_reward_weights:
 - 1.0
-- 2.0
+- 1.0
+- 1.0
+- 1.0
+- 1.0
 
 
 # Model configs from trl
@@ -40,10 +46,10 @@ log_level: info
 logging_first_step: true
 logging_steps: 1
 logging_strategy: steps
-push_to_hub: false
+push_to_hub: false # set as false on purpose
 hub_strategy: every_save
 hub_private_repo: true
-hub_model_id: TODO
+hub_model_id: upup-ashton-wang # TODO
 
 learning_rate: 1.0e-06
 lr_scheduler_type: cosine_with_min_lr

@@ -1,3 +1,7 @@
+"""Reward functions for GRPO training."""
+
+import asyncio
+import json
 import math
 import re
 from typing import Callable, Dict, Optional
@@ -167,6 +171,155 @@ def len_reward(completions: list[Dict[str, str]], solution: list[str], **kwargs)
             reward = lambda_val
         else:
             reward = min(0, lambda_val)
+
+        rewards.append(float(reward))
+
+    return rewards
+
+
+def len_reward_l1_exact(completions: list[Dict[str, str]], solution: list[str], target_length: list[int], **kwargs) -> float:
+    """Compute length-based rewards to discourage overthinking and promote token efficiency.
+
+    Taken from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
+
+    Args:
+        completions: List of model completions
+        solution: List of ground truth solutions
+
+    Returns:
+        List of rewards where:
+        - For correct answers: reward = 1 - alpha * abs(length - target_length)
+        - For incorrect answers: reward = - alpha * abs(length - target_length)
+    """
+    contents = [completion[0]["content"] for completion in completions]
+
+    # First check correctness of answers
+    correctness = []
+    for content, sol in zip(contents, solution):
+        gold_parsed = parse(
+            sol,
+            extraction_mode="first_match",
+            extraction_config=[LatexExtractionConfig()],
+        )
+        if len(gold_parsed) == 0:
+            # Skip unparseable examples
+            correctness.append(True)  # Treat as correct to avoid penalizing
+            print("Failed to parse gold solution: ", sol)
+            continue
+
+        answer_parsed = parse(
+            content,
+            extraction_config=[
+                LatexExtractionConfig(
+                    normalization_config=NormalizationConfig(
+                        nits=False,
+                        malformed_operators=False,
+                        basic_latex=True,
+                        equations=True,
+                        boxed=True,
+                        units=True,
+                    ),
+                    boxed_match_priority=0,
+                    try_extract_without_anchor=False,
+                )
+            ],
+            extraction_mode="first_match",
+        )
+        correctness.append(verify(answer_parsed, gold_parsed))
+
+    # Calculate lengths
+    lengths = [len(content) for content in contents]
+    min_len = min(lengths)
+    max_len = max(lengths)
+
+    # If all responses have the same length, return zero rewards
+    if max_len == min_len:
+        return [0.0] * len(completions)
+
+    rewards = []
+    alpha = 0.0003
+    for length, is_correct in zip(lengths, correctness):
+        lambda_val = alpha * abs(length - target_length)
+
+        if is_correct:
+            reward = 1 - lambda_val
+        else:
+            reward = - lambda_val
+
+        rewards.append(float(reward))
+
+    return rewards
+
+def len_reward_l1_max(completions: list[Dict[str, str]], solution: list[str], target_length: list[int], **kwargs) -> float:
+    """Compute length-based rewards to discourage overthinking and promote token efficiency.
+
+    Taken from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
+
+    Args:
+        completions: List of model completions
+        solution: List of ground truth solutions
+
+    Returns:
+        List of rewards where:
+        - For correct answers: reward = 1 - alpha * abs(length - target_length)
+        - For incorrect answers: reward = - alpha * abs(length - target_length)
+    """
+    contents = [completion[0]["content"] for completion in completions]
+
+    # First check correctness of answers
+    correctness = []
+    for content, sol in zip(contents, solution):
+        gold_parsed = parse(
+            sol,
+            extraction_mode="first_match",
+            extraction_config=[LatexExtractionConfig()],
+        )
+        if len(gold_parsed) == 0:
+            # Skip unparseable examples
+            correctness.append(True)  # Treat as correct to avoid penalizing
+            print("Failed to parse gold solution: ", sol)
+            continue
+
+        answer_parsed = parse(
+            content,
+            extraction_config=[
+                LatexExtractionConfig(
+                    normalization_config=NormalizationConfig(
+                        nits=False,
+                        malformed_operators=False,
+                        basic_latex=True,
+                        equations=True,
+                        boxed=True,
+                        units=True,
+                    ),
+                    boxed_match_priority=0,
+                    try_extract_without_anchor=False,
+                )
+            ],
+            extraction_mode="first_match",
+        )
+        correctness.append(verify(answer_parsed, gold_parsed))
+
+    # Calculate lengths
+    lengths = [len(content) for content in contents]
+    min_len = min(lengths)
+    max_len = max(lengths)
+
+    # If all responses have the same length, return zero rewards
+    if max_len == min_len:
+        return [0.0] * len(completions)
+
+    rewards = []
+    alpha = 0.0003
+    delta = 0.5
+    for length, is_correct in zip(lengths, correctness):
+        value = alpha * (target_length - length) + delta
+        lambda_val = max(0.0, min(value, 1.0))
+
+        if is_correct:
+            reward = lambda_val
+        else:
+            reward = 0
 
         rewards.append(float(reward))
 

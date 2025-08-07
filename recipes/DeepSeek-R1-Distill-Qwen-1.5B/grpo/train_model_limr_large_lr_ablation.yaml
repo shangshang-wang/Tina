@@ -1,5 +1,5 @@
-# check ./tina/utils/constant.py
-model_post_train_dataset_name: curated_limr_large_rank_ablation
+# check ./tina/config.py
+model_post_train_dataset_name: limr_large_lr_ablation
 model_post_train_type: grpo
 rl_post_train_reward_funcs:
 - format
@@ -13,8 +13,8 @@ rl_post_train_reward_weights:
 model_name_or_path: DeepSeek-R1-Distill-Qwen-1.5B
 attn_implementation: flash_attention_2
 use_peft: true
-lora_r: 128
-lora_alpha: 512
+lora_r: 32
+lora_alpha: 128
 lora_dropout: 0.05
 lora_target_modules:
 - q_proj
@@ -40,12 +40,12 @@ log_level: info
 logging_first_step: true
 logging_steps: 1
 logging_strategy: steps
-push_to_hub: false
+push_to_hub: false # set as false on purpose
 hub_strategy: every_save
 hub_private_repo: true
-hub_model_id: TODO
+hub_model_id: upup-ashton-wang # TODO
 
-learning_rate: 1e-06
+learning_rate: 5e-06
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1
@@ -60,7 +60,7 @@ report_to:
 - wandb
 
 save_strategy: steps
-save_steps: 50
+save_steps: 10
 save_total_limit: 100
 
 seed: 42

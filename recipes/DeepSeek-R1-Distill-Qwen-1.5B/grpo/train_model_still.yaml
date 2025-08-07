@@ -1,8 +1,8 @@
-# check ./tina/utils/constant.py
-model_post_train_dataset_name: curated_open_rs1
+# check ./tina/config.py
+model_post_train_dataset_name: still
 model_post_train_type: grpo
 rl_post_train_reward_funcs:
-- format
+- length
 - accuracy
 rl_post_train_reward_weights:
 - 1.0
@@ -40,18 +40,18 @@ log_level: info
 logging_first_step: true
 logging_steps: 1
 logging_strategy: steps
-push_to_hub: false
+push_to_hub: false # set as false on purpose
 hub_strategy: every_save
 hub_private_repo: true
-hub_model_id: TODO
+hub_model_id: upup-ashton-wang # TODO
 
-learning_rate: 1.0e-06
+learning_rate: 1e-06
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1
 max_prompt_length: 512
 max_completion_length: 3584
-max_steps: 5000 # use 5000 for lr scheduler but stop at 2400 steps
+max_steps: 7500 # use 7500 for lr scheduler but stop at 3750 steps
 num_generations: 4
 num_train_epochs: 1
 overwrite_output_dir: true
@@ -60,7 +60,7 @@ report_to:
 - wandb
 
 save_strategy: steps
-save_steps: 100
+save_steps: 10
 save_total_limit: 100
 
 seed: 42
