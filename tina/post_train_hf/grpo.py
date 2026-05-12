@@ -9,7 +9,7 @@ import random
 import sys
 import torch
 import transformers
-from transformers import set_seed, AutoModelForCausalLM, AutoTokenizer
+from transformers import set_seed, AutoModelForCausalLM, AutoTokenizer, TrainerCallback
 from transformers.trainer_utils import get_last_checkpoint
 
 from trl import ModelConfig, TrlParser # GRPOTrainer, GRPOConfig
@@ -22,6 +22,7 @@ from tina.post_train_hf.preprocess import make_conv_for_grpo, make_conv_for_grpo
 from tina.post_train_hf.rewards import (
     accuracy_reward,
     format_reward,
+    plan_format_reward,
     tag_count_reward,
     len_reward,
     len_reward_l1_exact,
@@ -31,7 +32,17 @@ from tina.post_train_hf.rewards import (
     get_repetition_penalty_reward)
 from tina.utils.chat_template import DEFAULT_CHAT_TEMPLATE, REASON_CHAT_TEMPLATE
 from tina.utils.constant import RL_POST_TRAIN_CONFIG_MAP
-from tina.utils.prompt import OPEN_R1_SYSTEM_PROMPT, OPEN_RS_SYSTEM_PROMPT
+from tina.utils.prompt import OPEN_R1_SYSTEM_PROMPT, OPEN_RS_SYSTEM_PROMPT, PLAN_SCOPE_SYSTEM_APPENDIX
+
+
+class StopAtStepCallback(TrainerCallback):
+    def __init__(self, stop_at_step: int):
+        self.stop_at_step = stop_at_step
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if self.stop_at_step > 0 and state.global_step >= self.stop_at_step:
+            control.should_training_stop = True
+        return control
 
 
 def main():
@@ -150,6 +161,8 @@ def main():
 
 
     SYSTEM_PROMPT = OPEN_RS_SYSTEM_PROMPT if "open-rs" in model_post_train_dataset_name else OPEN_R1_SYSTEM_PROMPT
+    if training_args.use_plan_scaffold:
+        SYSTEM_PROMPT = SYSTEM_PROMPT.rstrip() + "\n" + PLAN_SCOPE_SYSTEM_APPENDIX.strip() + "\n"
 
     if "l1" in pt_args.model_post_train_dataset_name:
         # uniformly sample a target length between 100 and 4000
@@ -192,6 +205,12 @@ def main():
     RL_POST_TRAIN_REWARD_MAP = {
         "accuracy": accuracy_reward,
         "format": format_reward,
+        "plan_format": lambda completions, **kwargs: plan_format_reward(
+            completions,
+            plan_min_tokens=training_args.plan_min_tokens,
+            plan_max_tokens=training_args.plan_max_tokens,
+            **kwargs,
+        ),
         "tag_count": tag_count_reward,
         "length": len_reward,
         "length_l1_exact": len_reward_l1_exact,
@@ -224,6 +243,11 @@ def main():
             # PushToHubRevisionCallback(dataset_name=pt_args.model_post_train_dataset_name, use_peft=model_args.use_peft)
         ]
 
+    stop_at_step = int(os.environ.get("TINA_STOP_AT_STEP", "0") or "0")
+    if stop_at_step > 0:
+        logger.info(f"\nStopping training at step {stop_at_step}; scheduler max_steps remains {training_args.max_steps}.")
+        callbacks.append(StopAtStepCallback(stop_at_step))
+
     trainer = GRPOTrainer(
         model=model,
         processing_class=tokenizer,
@@ -254,7 +278,10 @@ def main():
     trainer.log_metrics("train", train_metrics)
     trainer.save_metrics("train", train_metrics)
     trainer.save_state()
-    trainer.push_to_hub(commit_message=f"Add checkpoint {training_args.max_steps} post-trained on {pt_args.model_post_train_dataset_name}")
+    if training_args.push_to_hub:
+        trainer.push_to_hub(commit_message=f"Add checkpoint {training_args.max_steps} post-trained on {pt_args.model_post_train_dataset_name}")
+    else:
+        logger.info("\nSkipping push_to_hub because push_to_hub is false.")
 
     del trainer
     torch.cuda.empty_cache()

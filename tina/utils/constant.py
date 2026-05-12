@@ -17,6 +17,7 @@ RL_POST_TRAIN_CONFIG_MAP = {
     # "fastcurl": "Nickyang/FastCuRL", # 80.6k
     "still": "RUC-AIBOX/STILL-3-Preview-RL-Data", # 33k
     "open_rs3": "knoveleng/open-rs", # 7k => combine s1 dataset and deepscaler
+    "open_rs3_repo_default": "knoveleng/open-rs", # repo-default Open-RS3 recipe with an isolated output dir
     "open_rs2": "knoveleng/open-rs", # 7k => combine s1 dataset and deepscaler
     "open_rs1": "knoveleng/open-s1", # 18.6k => from s1 dataset
     # Extra datasets
@@ -33,6 +34,10 @@ RL_POST_TRAIN_CONFIG_MAP = {
     "open_rs3_drgrpo_ablation": "knoveleng/open-rs",
     "open_rs3_format_ablation": "knoveleng/open-rs",
     "open_rs3_long_completion_ablation": "knoveleng/open-rs",
+    "open_rs3_full_token_ablation": "knoveleng/open-rs",
+    "open_rs3_plan25_ablation": "knoveleng/open-rs",
+    "open_rs3_plan35_ablation": "knoveleng/open-rs",
+    "open_rs3_planscope_250": "knoveleng/open-rs",
 
     "openthoughts3": "open-thoughts/OpenThoughts3-1.2M"
 }

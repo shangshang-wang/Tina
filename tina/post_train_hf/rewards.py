@@ -69,6 +69,28 @@ def format_reward(completions, **kwargs):
     return [count_tags(c) for c in contents]
 
 
+def plan_format_reward(completions, plan_min_tokens: int = 8, plan_max_tokens: int = 128, **kwargs):
+    """Reward exactly one <plan>...</plan> block with a reasonable whitespace-token length."""
+
+    def score(text: str) -> float:
+        if text.count("<plan>") != 1 or text.count("</plan>") != 1:
+            return 0.0
+
+        start = text.find("<plan>")
+        end = text.find("</plan>")
+        if end <= start:
+            return 0.0
+
+        plan = text[start + len("<plan>") : end].strip()
+        plan_tokens = len(plan.split())
+        if plan_min_tokens <= plan_tokens <= plan_max_tokens:
+            return 1.0
+        return 0.0
+
+    contents = [completion[0]["content"] for completion in completions]
+    return [score(c) for c in contents]
+
+
 def tag_count_reward(completions, **kwargs) -> list[float]:
     """Reward function that checks if we produce the desired number of think and answer tags associated with `format_reward()`.
 

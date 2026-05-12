@@ -174,3 +174,15 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Tina local runtime artifacts
+/ckpts/
+/datasets/
+/outputs/
+/logs/
+/.cache/
+/wandb/
+/scratch/
+
+# Local secret overrides. Keep tokens in the shell or in this untracked file.
+scripts/set/local_vars.sh

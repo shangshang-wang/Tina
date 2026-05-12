@@ -16,6 +16,11 @@ i.e., <think> reasoning process here </think> <answer> answer here </answer>.
 Note that respond by English, NOT use other languages.
 """
 
+PLAN_SCOPE_SYSTEM_APPENDIX = """
+Before detailed reasoning, write a brief high-level strategy enclosed in exactly one <plan>...</plan> block. Then continue solving normally.
+Use this structure: <think> <plan> short strategy here </plan> detailed reasoning here </think> <answer> final answer here </answer>.
+"""
+
 
 # borrowed from deepseek r1
 SAE_FINE_TUNE_SYSTEM_PROMPT = """
