@@ -87,6 +87,40 @@ def tag_count_reward(completions, **kwargs) -> list[float]:
     return [count_tags(c) for c in contents]
 
 
+def get_plan_format_reward(tokenizer=None, min_tokens: int = 4, max_tokens: int = 96):
+    """Reward exactly one concise <plan>...</plan> block in each completion."""
+
+    def plan_format_reward(completions, **kwargs):
+        contents = [completion[0]["content"] for completion in completions]
+        rewards = []
+        for content in contents:
+            if content.count("<plan>") != 1 or content.count("</plan>") != 1:
+                rewards.append(0.0)
+                continue
+
+            plan_start = content.find("<plan>")
+            plan_end = content.find("</plan>")
+            if plan_start > plan_end:
+                rewards.append(0.0)
+                continue
+
+            plan_text = content[plan_start + len("<plan>"):plan_end].strip()
+            if not plan_text:
+                rewards.append(0.0)
+                continue
+
+            if tokenizer is not None:
+                plan_len = len(tokenizer(plan_text, add_special_tokens=False).input_ids)
+            else:
+                plan_len = len(plan_text.split())
+            rewards.append(float(min_tokens <= plan_len <= max_tokens))
+
+        return rewards
+
+    plan_format_reward.__name__ = "plan_format_reward"
+    return plan_format_reward
+
+
 def reasoning_steps_reward(completions, **kwargs):
     r"""Reward function that checks for clear step-by-step reasoning.
     Regex pattern:

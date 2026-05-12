@@ -174,3 +174,13 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local Tina artifacts: datasets, model weights, eval outputs, logs, and caches.
+# Keep generated research artifacts off GitHub; publish only code, configs, and
+# small documentation/manifest files that are intentionally tracked.
+/ckpts/
+/datasets/
+/outputs/
+/logs/
+/.cache/
+/wandb/

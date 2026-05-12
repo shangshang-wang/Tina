@@ -43,22 +43,25 @@ class FixedPromptEvaluationCallback(TrainerCallback):
                 self.completion_table["step"].append(str(state.global_step))
                 self.completion_table["prompt"].append(self.prompt)
                 self.completion_table["completion"].append(completion)
-                df = pd.DataFrame(self.completion_table)
-                wandb.log({"completions": wandb.Table(dataframe=df)})
+                if wandb.run is not None:
+                    df = pd.DataFrame(self.completion_table)
+                    wandb.log({"completions": wandb.Table(dataframe=df)})
 
     def eval_prompt(self, model, tokenizer):
         if hasattr(model, "peft_config"):
             model.peft_config['default'].inference_mode = True
 
         self.tokenized_prompt.to(model.device)
-        outputs = model.generate(
-            **self.tokenized_prompt,
-            max_length=self.max_generation_length,
-            temperature=0.01,  # Very low temperature
-            top_k=1,  # Only consider the most likely token
-            top_p=1.0,  # Disable nucleus sampling or set to a high value
-        )
-        completion = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        input_length = self.tokenized_prompt["input_ids"].shape[-1]
+        with torch.no_grad():
+            outputs = model.generate(
+                **self.tokenized_prompt,
+                max_new_tokens=self.max_generation_length,
+                do_sample=False,
+                pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+            )
+        completion = tokenizer.decode(outputs[0][input_length:], skip_special_tokens=True)
 
         if hasattr(model, "peft_config"):
             model.peft_config['default'].inference_mode = False
@@ -69,7 +72,8 @@ class FixedPromptEvaluationCallback(TrainerCallback):
 class GradientClippingLoggerCallback(TrainerCallback):
     def on_step_end(self, args, state, control, model=None, processing_class=None, **kwargs):
         self.clipped_grad_norm = np.sqrt(sum(p.grad.data.norm(2).item() ** 2 for p in model.parameters() if p.grad is not None))
-        wandb.log({"clipped_grad_norm": self.clipped_grad_norm})
+        if wandb.run is not None:
+            wandb.log({"clipped_grad_norm": self.clipped_grad_norm})
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         if logs is not None:

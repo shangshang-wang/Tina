@@ -9,6 +9,7 @@ class ModelPTConfig:
     model_post_train_type: Literal["grpo", "sft"] = field(default="grpo")
     model_post_train_dataset_name: str = field(default="still")
     model_post_train_dataset_config: str | None = field(default=None)
+    model_post_train_dataset_path: str | None = field(default=None)
     trace_free: bool = field(default=True)
 
     rl_post_train_reward_funcs: list[str] = field(default_factory=lambda: ["accuracy", "format"])
