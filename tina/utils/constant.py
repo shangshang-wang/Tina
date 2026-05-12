@@ -37,6 +37,10 @@ RL_POST_TRAIN_CONFIG_MAP = {
     "open_rs3_full_token_ablation": "knoveleng/open-rs",
     "open_rs3_plan25_ablation": "knoveleng/open-rs",
     "open_rs3_plan35_ablation": "knoveleng/open-rs",
+    "open_rs3_plan15_ablation": "knoveleng/open-rs",
+    "open_rs3_plan25": "knoveleng/open-rs",
+    "open_rs3_plan35": "knoveleng/open-rs",
+    "open_rs3_plan50_ablation": "knoveleng/open-rs",
     "open_rs3_planscope_250": "knoveleng/open-rs",
 
     "openthoughts3": "open-thoughts/OpenThoughts3-1.2M"

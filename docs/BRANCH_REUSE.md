@@ -1,7 +1,8 @@
 # Branch Upload and Reuse Notes
 
-This branch contains reusable PlanScope / plan-prefix GRPO support, evaluation
-helpers, recipes, and local runbooks.
+This branch contains reusable offline diagnostics, PlanScope / plan-prefix GRPO
+support, filtered-data utilities, recipes, evaluation helpers, and local
+runbooks.
 
 ## 0. Current Sync Policy
 
@@ -11,9 +12,12 @@ artifacts out of Git.
 Reusable:
 
 ```text
+tina/analysis/
 tina/post_train_hf/
 tina/utils/
 recipes/
+scripts/analysis/
+scripts/data/
 scripts/eval/
 scripts/train/
 scripts/set/
@@ -56,24 +60,18 @@ Expected result: no real tokens.
 
 ## 1. Push This Branch to Your Fork
 
-Use your own remote, not the official Tina upstream. In this checkout the
-current remote is:
-
-```text
-origin https://github.com/shangshang-wang/Tina.git
-```
-
-If you want to use the branch name from the other machine's notes:
+Use a fork remote when your SSH key authenticates as that fork owner. On this
+machine, SSH authenticates as `seedsaw`, so push to the `seedsaw` fork rather
+than `shangshang-wang/Tina` unless that account has write access there.
 
 ```bash
 cd /path/to/Tina
 git remote -v
 git status --short
-git switch -c analysis/offline-diagnostics
-git push -u origin analysis/offline-diagnostics
+git push -u seedsaw analysis/offline-diagnostics
 ```
 
-If the other machine used a separate fork remote, add it explicitly:
+If the fork remote is missing:
 
 ```bash
 git remote add seedsaw git@github.com:seedsaw/Tina.git
@@ -83,10 +81,11 @@ git push -u seedsaw analysis/offline-diagnostics
 Before pushing, check that generated artifacts are not staged:
 
 ```bash
-git diff --cached --name-only | rg '^(ckpts|datasets|outputs|logs|\.cache|wandb)/'
+git diff --cached --name-only | rg '^(ckpts|datasets|outputs|logs|\.cache|wandb|scratch)/'
+git diff --cached --name-only | rg 'scripts/set/local_vars.sh'
 ```
 
-That command should print nothing. These paths are intentionally ignored:
+Both commands should print nothing. These paths are intentionally ignored:
 
 ```text
 /ckpts/
@@ -95,21 +94,23 @@ That command should print nothing. These paths are intentionally ignored:
 /logs/
 /.cache/
 /wandb/
+/scratch/
+scripts/set/local_vars.sh
 ```
 
 ## 2. Reuse on Another Machine
 
-Clone the repository and check out the shared branch:
+Clone the fork and check out the branch:
 
 ```bash
-git clone git@github.com:<your-user-or-org>/Tina.git
+git clone git@github.com:seedsaw/Tina.git
 cd Tina
 git checkout analysis/offline-diagnostics
 ```
 
 Set up the environment using the target machine's own CUDA, Python, and package
 versions. Do not copy local cache, checkpoint, dataset, output, or log
-directories from this machine into Git.
+directories from one machine into Git.
 
 Then configure local paths:
 
@@ -168,12 +169,11 @@ python scripts/analysis/compare_rollouts.py --help
 python scripts/analysis/analyze_token_signals.py --help
 python scripts/data/probe_desirable_difficulty.py --help
 bash scripts/train/post_train_model_grpo.sh
-bash scripts/train/run_planner_sparse_ablation_gpu67.sh
-bash scripts/eval/eval_deepseek_base_multi_seed_gpu7.sh
+bash scripts/train/post_train_model_grpo_dd_filter.sh
+bash scripts/eval/eval_dd_filter_checkpoints.sh
 bash scripts/eval/auto_eval_on_free_gpus.sh
 bash scripts/eval/eval_planscope250_single_gpu_seed.sh
 bash scripts/eval/eval_planscope250_gpu67_seeds0_4.sh
-bash scripts/train/post_train_model_grpo_dd_filter.sh
 ```
 
 The PlanScope / plan-prefix implementation is spread across:
@@ -186,14 +186,27 @@ tina/post_train_hf/rewards.py
 tina/utils/prompt.py
 tina/utils/constant.py
 recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_*ablation.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_plan*.yaml
 recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_planscope_250.yaml
 ```
 
-Key toggles:
+Both config spellings are currently supported:
 
 ```yaml
+# Newer filtered-data branch spelling
+token_loss_mask_type: plan_prefix
+plan_format_anchor_radius: 4
+plan_answer_anchor_tokens: 32
+
+# Backward-compatible local spelling
 token_loss_mask: plan_prefix
-plan_prefix_ratio: 0.25
+format_anchor_width: 8
+answer_anchor_width: 32
+```
+
+PlanScope-GRPO requires KL on all tokens:
+
+```yaml
 use_plan_scaffold: true
 kl_all_tokens: true
 rl_post_train_reward_funcs:
@@ -225,12 +238,6 @@ They may assume this machine's GPU layout, local checkpoint paths, offline cache
 settings, queue behavior, or package build details. Treat them as examples or
 runbooks, not portable Tina APIs.
 
-The local environment note is:
-
-```text
-scripts/local/ENVIRONMENT.md
-```
-
 This repository also keeps machine observations under:
 
 ```text
@@ -248,15 +255,15 @@ Before committing or pushing:
 
 ```bash
 git status --short
-git status --ignored --short | rg '^(!! )?(ckpts|datasets|outputs|logs|\.cache|wandb)/'
-git diff --cached --name-only | rg '^(ckpts|datasets|outputs|logs|\.cache|wandb)/'
+git status --ignored --short | rg '^(!! )?(ckpts|datasets|outputs|logs|\.cache|wandb|scratch)/'
+git diff --cached --name-only | rg '^(ckpts|datasets|outputs|logs|\.cache|wandb|scratch)/'
 git diff --cached --name-only | rg 'scripts/set/local_vars.sh'
 ```
 
 Expected result:
 
-- `ckpts/`, `datasets/`, `outputs/`, `logs/`, `.cache/`, and `wandb/` may appear
-  as ignored.
+- `ckpts/`, `datasets/`, `outputs/`, `logs/`, `.cache/`, `wandb/`, and `scratch/`
+  may appear as ignored.
 - They must not appear as staged files.
 - `scripts/set/local_vars.sh` must not be staged.
 - Only code, configs, recipes, and small documentation files should be staged.
@@ -285,21 +292,18 @@ Preferred workflow:
 
 ```bash
 git status --short
-git switch -c sync/<machine-name>-$(date -u +%Y%m%d)
 git fetch --all --prune
 git log --oneline --decorate --graph --all -n 30
-git merge origin/analysis/offline-diagnostics
+git merge seedsaw/analysis/offline-diagnostics
 ```
-
-If the other machine pushed to a different remote or branch, replace
-`origin/analysis/offline-diagnostics` with that remote-tracking branch.
 
 Conflict policy:
 
 - Keep `.gitignore` and `set_vars.sh` secret-safe.
 - Prefer repo-location-derived paths over hardcoded absolute paths.
 - Preserve both machines' recipes when names differ.
-- If two recipes share a filename but differ in hyperparameters, keep one under
-  the existing name and add a suffix such as `_machine129` or `_paper_aligned`.
+- If two recipes share a filename but differ in machine-specific GPU settings,
+  keep the portable recipe in `recipes/` and put machine-specific launch details
+  under `scripts/local/`.
 - Do not resolve conflicts by deleting local checkpoint/output directories;
   those directories should be ignored and handled outside Git.

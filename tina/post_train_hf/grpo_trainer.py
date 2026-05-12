@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import os
 import textwrap
 import warnings
-import math
 from collections import defaultdict
 from typing import Any, Callable, Optional, Sized, Union
 from unittest.mock import patch
@@ -316,10 +316,25 @@ class GRPOTrainer(Trainer):
         self.use_vllm = args.use_vllm
 
         self.beta = args.beta
-        self.token_loss_mask = args.token_loss_mask
+        self.token_loss_mask_type = args.token_loss_mask_type
+        if getattr(args, "token_loss_mask", "full") == "plan_prefix":
+            self.token_loss_mask_type = "plan_prefix"
+        elif self.token_loss_mask_type == "none" and getattr(args, "token_loss_mask", "full") not in {"full", "none"}:
+            raise ValueError(
+                "`token_loss_mask` must be one of {'full', 'none', 'plan_prefix'}, "
+                f"got {args.token_loss_mask!r}."
+            )
         self.plan_prefix_ratio = args.plan_prefix_ratio
-        self.format_anchor_width = args.format_anchor_width
-        self.answer_anchor_width = args.answer_anchor_width
+        self.plan_format_anchor_radius = (
+            args.plan_format_anchor_radius
+            if args.plan_format_anchor_radius != 4
+            else getattr(args, "format_anchor_width", args.plan_format_anchor_radius)
+        )
+        self.plan_answer_anchor_tokens = (
+            args.plan_answer_anchor_tokens
+            if args.plan_answer_anchor_tokens != 32
+            else getattr(args, "answer_anchor_width", args.plan_answer_anchor_tokens)
+        )
         self.use_plan_scaffold = args.use_plan_scaffold
         self.plan_rl_weight = args.plan_rl_weight
         self.execute_rl_weight = args.execute_rl_weight
@@ -328,32 +343,50 @@ class GRPOTrainer(Trainer):
         self.plan_max_tokens = args.plan_max_tokens
         self.use_advantage_aware_phase_weight = args.use_advantage_aware_phase_weight
         self.kl_all_tokens = args.kl_all_tokens
-        valid_token_loss_masks = {"full", "plan_prefix"}
-        if self.token_loss_mask not in valid_token_loss_masks:
+        self._think_end_token_id_variants = []
+        for think_end_text in ("</think>", "\n</think>", "</think>\n", "\n</think>\n"):
+            token_ids = processing_class(think_end_text, add_special_tokens=False).input_ids
+            if token_ids and token_ids not in self._think_end_token_id_variants:
+                self._think_end_token_id_variants.append(token_ids)
+        self._answer_marker_texts = [
+            ("<answer>", 0),
+            ("\\boxed{", 32),
+            ("\\boxed", 32),
+            ("boxed", 32),
+            ("final answer", 32),
+            ("Final answer", 32),
+            ("answer is", 32),
+            ("Answer:", 32),
+        ]
+
+        if self.token_loss_mask_type not in {"none", "plan_prefix"}:
             raise ValueError(
-                f"`token_loss_mask` must be one of {sorted(valid_token_loss_masks)}, got {self.token_loss_mask!r}."
+                "token_loss_mask_type must be one of {'none', 'plan_prefix'}, "
+                f"got {self.token_loss_mask_type!r}."
             )
         if not 0.0 < self.plan_prefix_ratio <= 1.0:
-            raise ValueError(f"`plan_prefix_ratio` must be in (0, 1], got {self.plan_prefix_ratio}.")
-        if self.format_anchor_width < 0:
-            raise ValueError(f"`format_anchor_width` must be non-negative, got {self.format_anchor_width}.")
-        if self.answer_anchor_width < 0:
-            raise ValueError(f"`answer_anchor_width` must be non-negative, got {self.answer_anchor_width}.")
+            raise ValueError(f"plan_prefix_ratio must be in (0, 1], got {self.plan_prefix_ratio}.")
+        if self.plan_format_anchor_radius < 0:
+            raise ValueError(
+                f"plan_format_anchor_radius must be non-negative, got {self.plan_format_anchor_radius}."
+            )
+        if self.plan_answer_anchor_tokens < 0:
+            raise ValueError(f"plan_answer_anchor_tokens must be non-negative, got {self.plan_answer_anchor_tokens}.")
         if self.plan_min_tokens < 0:
-            raise ValueError(f"`plan_min_tokens` must be non-negative, got {self.plan_min_tokens}.")
+            raise ValueError(f"plan_min_tokens must be non-negative, got {self.plan_min_tokens}.")
         if self.plan_max_tokens < self.plan_min_tokens:
             raise ValueError(
-                f"`plan_max_tokens` must be >= plan_min_tokens, got {self.plan_max_tokens} < {self.plan_min_tokens}."
+                f"plan_max_tokens must be >= plan_min_tokens, got {self.plan_max_tokens} < {self.plan_min_tokens}."
             )
-        for name, value in {
-            "plan_rl_weight": self.plan_rl_weight,
-            "execute_rl_weight": self.execute_rl_weight,
-            "answer_rl_weight": self.answer_rl_weight,
-        }.items():
-            if value < 0:
-                raise ValueError(f"`{name}` must be non-negative, got {value}.")
+        for weight_name, weight_value in (
+            ("plan_rl_weight", self.plan_rl_weight),
+            ("execute_rl_weight", self.execute_rl_weight),
+            ("answer_rl_weight", self.answer_rl_weight),
+        ):
+            if weight_value < 0:
+                raise ValueError(f"{weight_name} must be non-negative, got {weight_value}.")
         if self.use_plan_scaffold and not self.kl_all_tokens:
-            raise ValueError("PlanScope-GRPO requires `kl_all_tokens=true` so KL remains on all completion tokens.")
+            raise ValueError("PlanScope-GRPO requires kl_all_tokens=true so KL remains on all completion tokens.")
 
         # The trainer estimates the number of FLOPs (floating-point operations) using the number of elements in the
         # input tensor associated with the key "input_ids". However, in GRPO, the sampled data does not include the
@@ -492,6 +525,180 @@ class GRPOTrainer(Trainer):
             if isinstance(reward_func, PreTrainedModel):
                 self.reward_funcs[i] = self.accelerator.prepare_model(reward_func, evaluation_mode=True)
 
+    @staticmethod
+    def _char_to_token_index(offsets: list[tuple[int, int]], char_pos: int, default: int) -> int:
+        for token_idx, (start, end) in enumerate(offsets):
+            if start <= char_pos < end:
+                return token_idx
+            if char_pos < start:
+                return token_idx
+        return default
+
+    @staticmethod
+    def _char_span_to_token_span(offsets: list[tuple[int, int]], start_char: int, end_char: int) -> tuple[int, int]:
+        valid_length = len(offsets)
+        start_idx = GRPOTrainer._char_to_token_index(offsets, start_char, valid_length)
+        end_idx = start_idx
+        for token_idx, (start, end) in enumerate(offsets):
+            if start < end_char and end > start_char:
+                end_idx = token_idx + 1
+        return start_idx, max(start_idx, end_idx)
+
+    def _find_answer_phase_start_from_text(
+        self,
+        completion_text: str,
+        offsets: list[tuple[int, int]],
+        execute_start: int,
+    ) -> int:
+        answer_tag_char_idx = completion_text.find("<answer>")
+        if answer_tag_char_idx >= 0:
+            answer_tag_token_idx = self._char_to_token_index(offsets, answer_tag_char_idx, len(offsets))
+            if answer_tag_token_idx >= execute_start:
+                return answer_tag_token_idx
+
+        marker_matches = []
+        for marker_text, radius in self._answer_marker_texts:
+            if marker_text == "<answer>":
+                continue
+            search_start = 0
+            while True:
+                char_idx = completion_text.find(marker_text, search_start)
+                if char_idx < 0:
+                    break
+                token_idx = self._char_to_token_index(offsets, char_idx, len(offsets))
+                if token_idx >= execute_start:
+                    marker_matches.append((token_idx, radius))
+                search_start = char_idx + len(marker_text)
+
+        valid_length = len(offsets)
+        if marker_matches:
+            marker_start, radius = max(marker_matches, key=lambda item: item[0])
+            return min(valid_length, max(execute_start, marker_start - radius))
+        return max(execute_start, valid_length - 128)
+
+    def _build_phase_weights(
+        self,
+        completion_ids: torch.Tensor,
+        completion_mask: torch.Tensor,
+        advantages: Optional[torch.Tensor] = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        phase_weights = completion_mask.to(dtype=torch.float32)
+        valid_plan = torch.zeros(completion_ids.size(0), dtype=torch.bool, device=completion_ids.device)
+        plan_lengths = torch.zeros(completion_ids.size(0), dtype=torch.float32, device=completion_ids.device)
+
+        if not self.use_plan_scaffold:
+            return phase_weights, valid_plan, plan_lengths
+
+        valid_lengths = completion_mask.sum(dim=1).long()
+        for row_idx, valid_length in enumerate(valid_lengths.tolist()):
+            if valid_length <= 0:
+                continue
+
+            if self.use_advantage_aware_phase_weight and advantages is not None:
+                if advantages[row_idx].item() >= 0:
+                    plan_weight, execute_weight, answer_weight = 1.0, 0.2, 1.0
+                else:
+                    plan_weight, execute_weight, answer_weight = 0.5, 0.5, 1.0
+            else:
+                plan_weight = self.plan_rl_weight
+                execute_weight = self.execute_rl_weight
+                answer_weight = self.answer_rl_weight
+
+            valid_completion_ids = completion_ids[row_idx, :valid_length]
+            completion_text = self.processing_class.decode(valid_completion_ids, skip_special_tokens=True)
+            tokenized_completion = self.processing_class(
+                completion_text,
+                add_special_tokens=False,
+                return_offsets_mapping=True,
+            )
+            offsets = tokenized_completion["offset_mapping"]
+            phase_weights[row_idx, :valid_length] = execute_weight
+
+            execute_start = 0
+            if completion_text.count("<plan>") == 1 and completion_text.count("</plan>") == 1:
+                plan_start_char = completion_text.find("<plan>")
+                plan_end_char = completion_text.find("</plan>")
+                plan_content_start_char = plan_start_char + len("<plan>")
+                plan_end_tag_end_char = plan_end_char + len("</plan>")
+                plan_start, plan_phase_end = self._char_span_to_token_span(
+                    offsets,
+                    plan_start_char,
+                    plan_end_tag_end_char,
+                )
+                plan_content_start, plan_content_end = self._char_span_to_token_span(
+                    offsets,
+                    plan_content_start_char,
+                    plan_end_char,
+                )
+                plan_token_count = max(0, plan_content_end - plan_content_start)
+                plan_lengths[row_idx] = float(plan_token_count)
+                if (
+                    plan_content_start_char <= plan_end_char
+                    and self.plan_min_tokens <= plan_token_count <= self.plan_max_tokens
+                ):
+                    valid_plan[row_idx] = True
+
+                if plan_content_start_char <= plan_end_char:
+                    phase_weights[row_idx, plan_start:min(valid_length, plan_phase_end)] = plan_weight
+                    execute_start = min(valid_length, plan_phase_end)
+
+            answer_start = min(
+                valid_length,
+                self._find_answer_phase_start_from_text(completion_text, offsets, execute_start),
+            )
+            phase_weights[row_idx, answer_start:valid_length] = answer_weight
+
+        return phase_weights * completion_mask, valid_plan, plan_lengths
+
+    def _build_token_loss_mask(self, completion_ids: torch.Tensor, completion_mask: torch.Tensor) -> torch.Tensor:
+        if self.token_loss_mask_type == "none":
+            return completion_mask
+
+        if self.token_loss_mask_type != "plan_prefix":
+            raise ValueError(f"Unsupported token_loss_mask_type: {self.token_loss_mask_type}")
+
+        token_loss_mask = torch.zeros_like(completion_mask)
+        valid_lengths = completion_mask.sum(dim=1).long()
+        think_end_token_id_variants = [
+            torch.tensor(token_ids, device=completion_ids.device)
+            for token_ids in self._think_end_token_id_variants
+        ]
+
+        for row_idx, valid_length in enumerate(valid_lengths.tolist()):
+            if valid_length <= 0:
+                continue
+
+            think_end_start = valid_length
+            think_end_len = 0
+            valid_completion_ids = completion_ids[row_idx, :valid_length]
+            for token_ids in think_end_token_id_variants:
+                token_ids_len = token_ids.numel()
+                if token_ids_len == 0 or valid_length < token_ids_len:
+                    continue
+                matches = (valid_completion_ids.unfold(0, token_ids_len, 1) == token_ids).all(dim=1)
+                match_indices = matches.nonzero(as_tuple=True)[0]
+                if match_indices.numel() > 0 and match_indices[0].item() < think_end_start:
+                    think_end_start = match_indices[0].item()
+                    think_end_len = token_ids_len
+
+            reasoning_length = max(think_end_start, 1)
+            prefix_tokens = max(1, math.ceil(reasoning_length * self.plan_prefix_ratio))
+            token_loss_mask[row_idx, : min(prefix_tokens, valid_length)] = 1
+
+            if think_end_start < valid_length and think_end_len > 0:
+                anchor_start = max(0, think_end_start - self.plan_format_anchor_radius)
+                anchor_end = min(
+                    valid_length,
+                    think_end_start + think_end_len + self.plan_format_anchor_radius,
+                )
+                token_loss_mask[row_idx, anchor_start:anchor_end] = 1
+
+            if self.plan_answer_anchor_tokens > 0:
+                answer_anchor_start = max(0, valid_length - self.plan_answer_anchor_tokens)
+                token_loss_mask[row_idx, answer_anchor_start:valid_length] = 1
+
+        return token_loss_mask * completion_mask
+
     def _set_signature_columns_if_needed(self):
         # If `self.args.remove_unused_columns` is True, non-signature columns are removed.
         # By default, this method sets `self._signature_columns` to the model's expected inputs.
@@ -523,286 +730,6 @@ class GRPOTrainer(Trainer):
         # See https://github.com/huggingface/trl/issues/2770
         logits = logits[:, -logits_to_keep:]
         return selective_log_softmax(logits, input_ids)  #  compute logprobs for the input tokens
-
-    def _find_subsequence(self, row_ids: torch.Tensor, pattern_ids: torch.Tensor, end: int) -> Optional[int]:
-        pattern_len = pattern_ids.numel()
-        if pattern_len == 0 or end < pattern_len:
-            return None
-
-        for start in range(end - pattern_len + 1):
-            if torch.equal(row_ids[start : start + pattern_len], pattern_ids):
-                return start
-        return None
-
-    def _get_marker_patterns(self, marker: str, device: torch.device, dtype: torch.dtype) -> list[torch.Tensor]:
-        return [
-            torch.tensor(
-                self.processing_class.encode(variant, add_special_tokens=False),
-                device=device,
-                dtype=dtype,
-            )
-            for variant in (marker, f"\n{marker}", f" {marker}")
-        ]
-
-    def _find_first_marker(
-        self,
-        row_ids: torch.Tensor,
-        marker_patterns: list[torch.Tensor],
-        end: int,
-    ) -> tuple[Optional[int], int]:
-        best_start = None
-        best_len = 0
-        for pattern_ids in marker_patterns:
-            start = self._find_subsequence(row_ids, pattern_ids, end)
-            if start is not None and (best_start is None or start < best_start):
-                best_start = start
-                best_len = pattern_ids.numel()
-        return best_start, best_len
-
-    def _find_last_marker(
-        self,
-        row_ids: torch.Tensor,
-        marker_patterns: list[torch.Tensor],
-        end: int,
-    ) -> tuple[Optional[int], int]:
-        best_start = None
-        best_len = 0
-        for pattern_ids in marker_patterns:
-            pattern_len = pattern_ids.numel()
-            if pattern_len == 0 or end < pattern_len:
-                continue
-            for start in range(end - pattern_len, -1, -1):
-                if torch.equal(row_ids[start : start + pattern_len], pattern_ids):
-                    if best_start is None or start > best_start:
-                        best_start = start
-                        best_len = pattern_len
-                    break
-        return best_start, best_len
-
-    def _plan_text_stats(self, completions_text: list[str], device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
-        valid = []
-        lengths = []
-        for text in completions_text:
-            if text.count("<plan>") == 1 and text.count("</plan>") == 1:
-                start = text.find("<plan>") + len("<plan>")
-                end = text.find("</plan>")
-                plan_tokens = len(text[start:end].strip().split()) if end > start else 0
-                is_valid = self.plan_min_tokens <= plan_tokens <= self.plan_max_tokens
-            else:
-                plan_tokens = 0
-                is_valid = False
-            valid.append(float(is_valid))
-            lengths.append(float(plan_tokens))
-        return (
-            torch.tensor(valid, dtype=torch.float32, device=device),
-            torch.tensor(lengths, dtype=torch.float32, device=device),
-        )
-
-    def _find_answer_phase_start(self, row_ids: torch.Tensor, valid_len: int) -> int:
-        device = row_ids.device
-        dtype = row_ids.dtype
-        answer_open_patterns = self._get_marker_patterns("<answer>", device, dtype)
-        boxed_patterns = self._get_marker_patterns("\\boxed", device, dtype)
-
-        answer_open_start, _ = self._find_first_marker(row_ids, answer_open_patterns, valid_len)
-        if answer_open_start is not None:
-            return answer_open_start
-
-        boxed_start, _ = self._find_last_marker(row_ids, boxed_patterns, valid_len)
-        if boxed_start is not None:
-            return max(0, boxed_start - self.answer_anchor_width)
-
-        return max(0, valid_len - 128)
-
-    def _char_span_to_token_span(
-        self,
-        offsets: list[tuple[int, int]],
-        char_start: int,
-        char_end: int,
-    ) -> tuple[Optional[int], Optional[int]]:
-        token_start = None
-        token_end = None
-        for idx, (offset_start, offset_end) in enumerate(offsets):
-            if offset_start == offset_end:
-                continue
-            if token_start is None and offset_end > char_start:
-                token_start = idx
-            if offset_start < char_end:
-                token_end = idx + 1
-        return token_start, token_end
-
-    def _build_plan_phase_weights_from_text(
-        self,
-        row_ids: torch.Tensor,
-        valid_len: int,
-        plan_weight: float,
-        execute_weight: float,
-        answer_weight: float,
-    ) -> torch.Tensor:
-        row_weights = torch.full((valid_len,), execute_weight, device=row_ids.device, dtype=torch.float32)
-        text = self.processing_class.decode(row_ids[:valid_len], skip_special_tokens=True)
-        tokenized = self.processing_class(text, add_special_tokens=False, return_offsets_mapping=True)
-        offsets = tokenized.get("offset_mapping", [])
-        usable_len = min(valid_len, len(offsets))
-        if usable_len <= 0:
-            row_weights[:] = answer_weight
-            return row_weights
-        offsets = offsets[:usable_len]
-
-        plan_open = text.find("<plan>")
-        plan_close = text.find("</plan>")
-        if plan_open != -1 and plan_close > plan_open:
-            plan_char_start = plan_open + len("<plan>")
-            plan_char_end = plan_close
-            plan_start, plan_end = self._char_span_to_token_span(offsets, plan_char_start, plan_char_end)
-            if plan_start is not None and plan_end is not None and plan_end > plan_start:
-                row_weights[plan_start:plan_end] = plan_weight
-
-        answer_open = text.find("<answer>")
-        if answer_open != -1:
-            answer_start, _ = self._char_span_to_token_span(offsets, answer_open, len(text))
-            answer_start = answer_start if answer_start is not None else max(0, usable_len - 128)
-        else:
-            boxed = text.rfind("\\boxed")
-            if boxed != -1:
-                boxed_start, _ = self._char_span_to_token_span(offsets, boxed, len(text))
-                answer_start = max(0, (boxed_start if boxed_start is not None else usable_len) - self.answer_anchor_width)
-            else:
-                answer_start = max(0, usable_len - 128)
-
-        row_weights[answer_start:valid_len] = answer_weight
-        return row_weights
-
-    def _build_plan_phase_weights(
-        self,
-        completion_ids: torch.Tensor,
-        completion_mask: torch.Tensor,
-        advantages: torch.Tensor,
-    ) -> torch.Tensor:
-        phase_weights = torch.zeros_like(completion_mask, dtype=torch.float32)
-        plan_open_patterns = self._get_marker_patterns("<plan>", completion_ids.device, completion_ids.dtype)
-        plan_close_patterns = self._get_marker_patterns("</plan>", completion_ids.device, completion_ids.dtype)
-
-        for row_idx in range(completion_ids.size(0)):
-            valid_len = int(completion_mask[row_idx].sum().item())
-            if valid_len <= 0:
-                continue
-
-            if self.use_advantage_aware_phase_weight:
-                if advantages[row_idx].item() >= 0:
-                    plan_weight = 1.0
-                    execute_weight = 0.2
-                    answer_weight = 1.0
-                else:
-                    plan_weight = 0.5
-                    execute_weight = 0.5
-                    answer_weight = 1.0
-            else:
-                plan_weight = self.plan_rl_weight
-                execute_weight = self.execute_rl_weight
-                answer_weight = self.answer_rl_weight
-
-            row_ids = completion_ids[row_idx]
-            try:
-                row_weights = self._build_plan_phase_weights_from_text(
-                    row_ids, valid_len, plan_weight, execute_weight, answer_weight
-                )
-                phase_weights[row_idx, :valid_len] = row_weights
-                continue
-            except Exception:
-                pass
-
-            phase_weights[row_idx, :valid_len] = execute_weight
-            plan_open_start, plan_open_len = self._find_first_marker(row_ids, plan_open_patterns, valid_len)
-            plan_close_start, plan_close_len = self._find_first_marker(row_ids, plan_close_patterns, valid_len)
-            answer_start = self._find_answer_phase_start(row_ids, valid_len)
-            if plan_open_start is not None and plan_close_start is not None and plan_close_start > plan_open_start:
-                plan_start = min(valid_len, plan_open_start + plan_open_len)
-                plan_end = min(valid_len, plan_close_start)
-                phase_weights[row_idx, plan_start:plan_end] = plan_weight
-                if plan_end < answer_start:
-                    phase_weights[row_idx, plan_end:answer_start] = execute_weight
-
-            phase_weights[row_idx, answer_start:valid_len] = answer_weight
-
-        return phase_weights * completion_mask.float()
-
-    def _build_plan_prefix_loss_mask(
-        self,
-        completion_ids: torch.Tensor,
-        completion_mask: torch.Tensor,
-    ) -> torch.Tensor:
-        loss_mask = torch.zeros_like(completion_mask)
-        think_open_patterns = self._get_marker_patterns("<think>", completion_ids.device, completion_ids.dtype)
-        think_close_patterns = self._get_marker_patterns("</think>", completion_ids.device, completion_ids.dtype)
-        answer_open_patterns = self._get_marker_patterns("<answer>", completion_ids.device, completion_ids.dtype)
-        answer_close_patterns = self._get_marker_patterns("</answer>", completion_ids.device, completion_ids.dtype)
-
-        for row_idx in range(completion_ids.size(0)):
-            valid_len = int(completion_mask[row_idx].sum().item())
-            if valid_len <= 0:
-                continue
-
-            row_ids = completion_ids[row_idx]
-            think_open_start, think_open_len = self._find_first_marker(row_ids, think_open_patterns, valid_len)
-            think_close_start, think_close_len = self._find_first_marker(row_ids, think_close_patterns, valid_len)
-            answer_open_start, _ = self._find_first_marker(row_ids, answer_open_patterns, valid_len)
-            answer_close_start, answer_close_len = self._find_first_marker(row_ids, answer_close_patterns, valid_len)
-
-            if think_open_start is not None:
-                reasoning_start = min(valid_len, think_open_start + think_open_len)
-            else:
-                reasoning_start = 0
-
-            if think_close_start is not None and think_close_start > reasoning_start:
-                reasoning_end = think_close_start
-            elif answer_open_start is not None and answer_open_start > reasoning_start:
-                reasoning_end = answer_open_start
-            else:
-                reasoning_end = valid_len
-
-            reasoning_len = max(reasoning_end - reasoning_start, 0)
-            prefix_len = max(1, math.ceil(reasoning_len * self.plan_prefix_ratio))
-            prefix_end = min(reasoning_end, reasoning_start + prefix_len)
-            if prefix_end > reasoning_start:
-                loss_mask[row_idx, reasoning_start:prefix_end] = 1
-
-            if think_close_start is not None:
-                anchor_start = max(0, think_close_start - self.format_anchor_width)
-                anchor_end = min(valid_len, think_close_start + think_close_len + self.format_anchor_width)
-                loss_mask[row_idx, anchor_start:anchor_end] = 1
-
-            if answer_open_start is not None:
-                answer_start = answer_open_start
-                if answer_close_start is not None and answer_close_start > answer_open_start:
-                    answer_end = min(valid_len, answer_close_start + answer_close_len)
-                else:
-                    answer_end = valid_len
-
-                anchor_end = min(valid_len, answer_start + self.answer_anchor_width)
-                loss_mask[row_idx, answer_start:anchor_end] = 1
-                tail_start = max(answer_start, answer_end - self.answer_anchor_width)
-                loss_mask[row_idx, tail_start:answer_end] = 1
-            elif self.answer_anchor_width > 0:
-                anchor_start = max(0, valid_len - self.answer_anchor_width)
-                loss_mask[row_idx, anchor_start:valid_len] = 1
-
-            if loss_mask[row_idx].sum() == 0:
-                fallback_len = max(1, math.ceil(valid_len * self.plan_prefix_ratio))
-                loss_mask[row_idx, :fallback_len] = 1
-
-        return loss_mask * completion_mask
-
-    def _build_token_loss_mask(
-        self,
-        completion_ids: torch.Tensor,
-        completion_mask: torch.Tensor,
-    ) -> torch.Tensor:
-        if self.token_loss_mask == "full":
-            return completion_mask
-        if self.token_loss_mask == "plan_prefix":
-            return self._build_plan_prefix_loss_mask(completion_ids, completion_mask)
-        raise ValueError(f"Unsupported token loss mask: {self.token_loss_mask}")
 
     def _move_model_to_vllm(self):
         with unwrap_model_for_generation(
@@ -913,7 +840,6 @@ class GRPOTrainer(Trainer):
 
         # Decode the generated completions
         completions_text = self.processing_class.batch_decode(completion_ids, skip_special_tokens=True)
-        plan_valid, plan_token_lengths = self._plan_text_stats(completions_text, device)
         if is_conversational(inputs[0]):
             completions = []
             for prompt, completion in zip(prompts, completions_text):
@@ -996,13 +922,6 @@ class GRPOTrainer(Trainer):
 
         self._metrics["reward"].append(rewards.mean().item())
         self._metrics["reward_std"].append(std_grouped_rewards.mean().item())
-        gathered_plan_valid = self.accelerator.gather_for_metrics(plan_valid)
-        gathered_plan_token_lengths = self.accelerator.gather_for_metrics(plan_token_lengths)
-        self._metrics["valid_plan_rate"].append(gathered_plan_valid.mean().item())
-        self._metrics["avg_plan_tokens"].append(gathered_plan_token_lengths.mean().item())
-        self._metrics["avg_completion_length"].append(
-            self.accelerator.gather_for_metrics(completion_mask.sum(1)).float().mean().item()
-        )
 
         if (
             self.log_completions
@@ -1043,10 +962,6 @@ class GRPOTrainer(Trainer):
         input_ids = torch.cat([prompt_ids, completion_ids], dim=1)
         attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
-        token_loss_mask = self._build_token_loss_mask(completion_ids, completion_mask)
-        token_loss_count = token_loss_mask.sum(dim=1).clamp_min(1)
-        kl_mask = completion_mask.float() if self.kl_all_tokens else token_loss_mask.float()
-        kl_count = kl_mask.sum(dim=1).clamp_min(1)
 
         per_token_logps = self._get_per_token_logps(model, input_ids, attention_mask, logits_to_keep)
 
@@ -1056,39 +971,64 @@ class GRPOTrainer(Trainer):
 
         # x - x.detach() allows for preserving gradients from x
         advantages = inputs["advantages"]
-        pg_weights = token_loss_mask.float()
-        if self.use_plan_scaffold:
-            pg_weights = self._build_plan_phase_weights(completion_ids, completion_mask, advantages)
-            pg_count = token_loss_count
-        else:
-            pg_count = pg_weights.sum(dim=1).clamp_min(1)
+        token_loss_mask = self._build_token_loss_mask(completion_ids, completion_mask)
+        phase_weights, valid_plan, plan_lengths = self._build_phase_weights(
+            completion_ids,
+            completion_mask,
+            advantages,
+        )
+        pg_mask = token_loss_mask.to(dtype=per_token_logps.dtype)
+        weighted_pg_mask = pg_mask * phase_weights.to(dtype=per_token_logps.dtype)
+        kl_mask = completion_mask if (self.kl_all_tokens or self.use_plan_scaffold) else token_loss_mask
 
         per_token_pg_loss = -torch.exp(per_token_logps - per_token_logps.detach()) * advantages.unsqueeze(1)
-
+        per_token_kl_loss = self.beta * per_token_kl
+        token_loss_denominator = token_loss_mask.sum(dim=1).clamp_min(1)
+        kl_denominator = kl_mask.sum(dim=1).clamp_min(1)
         if self.args.scale_rewards:
-            pg_loss = ((per_token_pg_loss * pg_weights).sum(dim=1) / pg_count).mean()
-            kl_loss = ((per_token_kl * kl_mask).sum(dim=1) / kl_count).mean()
-            loss = pg_loss + self.beta * kl_loss
+            pg_loss = ((per_token_pg_loss * weighted_pg_mask).sum(dim=1) / token_loss_denominator).mean()
+            kl_loss = ((per_token_kl_loss * kl_mask).sum(dim=1) / kl_denominator).mean()
+            loss = pg_loss + kl_loss
         else:
-            pg_loss = (per_token_pg_loss * pg_weights).sum() / pg_weights.sum().clamp_min(1)
-            kl_loss = (per_token_kl * kl_mask).sum() / kl_mask.sum().clamp_min(1)
-            loss = pg_loss + self.beta * kl_loss
+            pg_loss = (per_token_pg_loss * weighted_pg_mask).sum() / token_loss_mask.sum().clamp_min(1)
+            kl_loss = (per_token_kl_loss * kl_mask).sum() / kl_mask.sum().clamp_min(1)
+            loss = pg_loss + kl_loss
 
         # Log the metrics
         completion_length = self.accelerator.gather_for_metrics(completion_mask.sum(1)).float().mean().item()
         self._metrics["completion_length"].append(completion_length)
+        self._metrics["avg_completion_length"].append(completion_length)
         token_loss_length = self.accelerator.gather_for_metrics(token_loss_mask.sum(1)).float().mean().item()
         self._metrics["token_loss_length"].append(token_loss_length)
-        token_loss_fraction = (token_loss_mask.sum(1).float() / completion_mask.sum(1).clamp_min(1).float()).mean()
-        self._metrics["token_loss_fraction"].append(
-            self.accelerator.gather_for_metrics(token_loss_fraction).mean().item()
+        token_loss_density = (
+            self.accelerator.gather_for_metrics(token_loss_mask.sum(1).float() / completion_mask.sum(1).clamp_min(1))
+            .mean()
+            .item()
         )
-        avg_phase_weight = (pg_weights.sum(1) / completion_mask.sum(1).clamp_min(1).float()).mean()
-        self._metrics["avg_phase_weight"].append(
-            self.accelerator.gather_for_metrics(avg_phase_weight).mean().item()
+        self._metrics["token_loss_density"].append(token_loss_density)
+        phase_weight_per_completion = (phase_weights * completion_mask).sum(1) / completion_mask.sum(1).clamp_min(1)
+        avg_phase_weight = (
+            self.accelerator.gather_for_metrics(phase_weight_per_completion)
+            .float()
+            .mean()
+            .item()
         )
+        self._metrics["avg_phase_weight"].append(avg_phase_weight)
+        valid_plan_rate = self.accelerator.gather_for_metrics(valid_plan.float()).float().mean().item()
+        self._metrics["valid_plan_rate"].append(valid_plan_rate)
+        plan_length_stats = torch.stack(
+            [
+                (plan_lengths * (plan_lengths > 0).float()).sum(),
+                (plan_lengths > 0).float().sum(),
+            ]
+        )
+        gathered_plan_length_stats = self.accelerator.gather_for_metrics(plan_length_stats)
+        avg_plan_tokens = (
+            gathered_plan_length_stats[0::2].sum() / gathered_plan_length_stats[1::2].sum().clamp_min(1)
+        ).item()
+        self._metrics["avg_plan_tokens"].append(avg_plan_tokens)
 
-        mean_kl = ((per_token_kl * kl_mask).sum(dim=1) / kl_count).mean()
+        mean_kl = ((per_token_kl * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
         self._metrics["kl"].append(self.accelerator.gather_for_metrics(mean_kl).mean().item())
 
         return loss

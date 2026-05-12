@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 export CUDA_LAUNCH_BLOCKING=1
 export DS_LOG_LEVEL=error
 export TOKENIZERS_PARALLELISM=false
@@ -15,6 +14,14 @@ export NUMEXPR_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export OMP_NUM_THREADS=1
 
+if [[ -n "${CONDA_PREFIX:-}" ]]; then
+    export CUDA_HOME="${CONDA_PREFIX}"
+    export PATH="${CONDA_PREFIX}/bin:${PATH}"
+    export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${CONDA_PREFIX}/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}"
+    export CPATH="${CONDA_PREFIX}/targets/x86_64-linux/include:${CPATH:-}"
+    export CPLUS_INCLUDE_PATH="${CONDA_PREFIX}/targets/x86_64-linux/include:${CPLUS_INCLUDE_PATH:-}"
+fi
+
 ## basic setup for the env
 export CLUSTER_NAME=""
 export HOME_PREFIX="${HOME_PREFIX:-${HOME}}"
@@ -27,14 +34,11 @@ export PROJECT_PREFIX="${REPO_ROOT}"
 export SCRATCH_PREFIX="${REPO_ROOT}/scratch"
 mkdir -p "${HOME_PREFIX}" "${PROJECT_PREFIX}" "${SCRATCH_PREFIX}"
 
-export PROJECT_NAME="rl-reasoning"
 export TOPIC_NAME="Tina"
 export CORE_POSTFIX="tina"
-export PROJECT_POSTFIX="${PROJECT_NAME}/${TOPIC_NAME}"
 export PROJECT_DIR="${REPO_ROOT}"
 export HOME_DIR="${REPO_ROOT}"
-export PYTHONPATH="${HOME_DIR}":$PYTHONPATH
-export PYTHONPATH="${HOME_DIR}/${CORE_POSTFIX}":$PYTHONPATH
+export PYTHONPATH="${HOME_DIR}:${HOME_DIR}/${CORE_POSTFIX}:${PYTHONPATH:-}"
 mkdir -p "${PROJECT_DIR}"
 
 export CKPT_DIR="${PROJECT_DIR}/ckpts"

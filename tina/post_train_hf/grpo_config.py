@@ -241,6 +241,76 @@ class GRPOConfig(TrainingArguments):
         default=0.04,
         metadata={"help": "KL coefficient."},
     )
+    token_loss_mask_type: str = field(
+        default="none",
+        metadata={
+            "help": "Token-level loss mask to apply on top of the completion mask. Use 'none' for the original "
+            "full-token GRPO loss, or 'plan_prefix' to train only an early reasoning prefix plus format/answer "
+            "anchor tokens."
+        },
+    )
+    plan_prefix_ratio: float = field(
+        default=0.25,
+        metadata={
+            "help": "Fraction of reasoning tokens before the first </think> tag to keep when "
+            "token_loss_mask_type='plan_prefix'. Recommended ablations: 0.25 and 0.35."
+        },
+    )
+    plan_format_anchor_radius: int = field(
+        default=4,
+        metadata={
+            "help": "Number of tokens to keep on each side of the detected </think> tag when using the plan-prefix "
+            "loss mask."
+        },
+    )
+    plan_answer_anchor_tokens: int = field(
+        default=32,
+        metadata={
+            "help": "Number of final valid completion tokens to keep as an answer/format anchor when using the "
+            "plan-prefix loss mask."
+        },
+    )
+    use_plan_scaffold: bool = field(
+        default=False,
+        metadata={
+            "help": "If True, add a <plan>...</plan> instruction scaffold to the training prompt and enable "
+            "PlanScope phase weighting for the policy-gradient term."
+        },
+    )
+    plan_rl_weight: float = field(
+        default=1.0,
+        metadata={"help": "Policy-gradient weight for tokens in the <plan>...</plan> phase."},
+    )
+    execute_rl_weight: float = field(
+        default=1.0,
+        metadata={"help": "Policy-gradient weight for execute tokens after </plan> and before the answer phase."},
+    )
+    answer_rl_weight: float = field(
+        default=1.0,
+        metadata={"help": "Policy-gradient weight for final-answer tokens."},
+    )
+    plan_min_tokens: int = field(
+        default=4,
+        metadata={"help": "Minimum token length for a valid <plan>...</plan> block."},
+    )
+    plan_max_tokens: int = field(
+        default=96,
+        metadata={"help": "Maximum token length for a valid <plan>...</plan> block."},
+    )
+    use_advantage_aware_phase_weight: bool = field(
+        default=False,
+        metadata={
+            "help": "If True, use advantage-aware PlanScope weights: positive advantages use "
+            "plan=1.0/execute=0.2/answer=1.0; negative advantages use plan=0.5/execute=0.5/answer=1.0."
+        },
+    )
+    kl_all_tokens: bool = field(
+        default=False,
+        metadata={
+            "help": "If True, compute the KL term over all completion tokens even when policy-gradient token masks "
+            "or PlanScope phase weights are active."
+        },
+    )
     scale_rewards: bool = field(
         default=True,
         metadata={
@@ -260,59 +330,17 @@ class GRPOConfig(TrainingArguments):
     token_loss_mask: str = field(
         default="full",
         metadata={
-            "help": "Token-level loss mask strategy. Use 'full' for original Tina GRPO, or 'plan_prefix' to train "
-            "only the early reasoning prefix plus format/answer anchors."
-        },
-    )
-    plan_prefix_ratio: float = field(
-        default=1.0,
-        metadata={
-            "help": "Fraction of reasoning tokens to keep when token_loss_mask='plan_prefix'. Recommended ablations "
-            "are 0.25 and 0.35."
+            "help": "Backward-compatible alias for token_loss_mask_type. 'full' maps to 'none'; 'plan_prefix' maps "
+            "to 'plan_prefix'. Prefer token_loss_mask_type in new recipes."
         },
     )
     format_anchor_width: int = field(
-        default=8,
-        metadata={"help": "Tokens to keep on each side of the </think> tag for sparse token-loss masking."},
+        default=4,
+        metadata={"help": "Backward-compatible alias for plan_format_anchor_radius."},
     )
     answer_anchor_width: int = field(
         default=32,
-        metadata={"help": "Short answer-span anchor width for sparse token-loss masking."},
-    )
-    use_plan_scaffold: bool = field(
-        default=False,
-        metadata={"help": "Enable PlanScope-GRPO phase weighting for <plan>...</plan> completions."},
-    )
-    plan_rl_weight: float = field(
-        default=1.0,
-        metadata={"help": "Policy-gradient weight for tokens inside the <plan>...</plan> span."},
-    )
-    execute_rl_weight: float = field(
-        default=0.25,
-        metadata={"help": "Policy-gradient weight for execution tokens after </plan> and before the final answer."},
-    )
-    answer_rl_weight: float = field(
-        default=1.0,
-        metadata={"help": "Policy-gradient weight for final-answer tokens."},
-    )
-    plan_min_tokens: int = field(
-        default=8,
-        metadata={"help": "Minimum <plan> length in whitespace tokens used for PlanScope logging."},
-    )
-    plan_max_tokens: int = field(
-        default=128,
-        metadata={"help": "Maximum <plan> length in whitespace tokens used for PlanScope logging."},
-    )
-    use_advantage_aware_phase_weight: bool = field(
-        default=False,
-        metadata={"help": "Use advantage-aware PlanScope phase weights."},
-    )
-    kl_all_tokens: bool = field(
-        default=False,
-        metadata={
-            "help": "Keep KL on all completion tokens even when the policy-gradient term is token-masked. Must be "
-            "true for PlanScope-GRPO."
-        },
+        metadata={"help": "Backward-compatible alias for plan_answer_anchor_tokens."},
     )
     sync_ref_model: bool = field(
         default=False,
