@@ -4,6 +4,25 @@ This branch contains reusable offline diagnostics, PlanScope / plan-prefix GRPO
 support, filtered-data utilities, recipes, evaluation helpers, and local
 runbooks.
 
+Current shared branch:
+
+```text
+git@github.com:seedsaw/Tina.git
+analysis/offline-diagnostics
+```
+
+Latest synchronized merge commit from this machine:
+
+```text
+683f2f5 Merge reusable diagnostics from seedsaw branch
+```
+
+This commit merged:
+
+- This machine's commit `e1801ac Add reusable PlanScope GRPO diagnostics`.
+- The other machine's commits `d6f609c..ccff2f6` already present on
+  `seedsaw/analysis/offline-diagnostics`.
+
 ## 0. Current Sync Policy
 
 Keep reusable source, recipes, and small documentation in Git. Keep machine
@@ -58,6 +77,142 @@ rg -n 'hf_[A-Za-z0-9_-]+|wandb_[A-Za-z0-9_-]+' \
 
 Expected result: no real tokens.
 
+## 0.1 Public vs Machine-Specific Files
+
+Public reusable files are intended to be used on both machines:
+
+```text
+tina/analysis/
+tina/post_train_hf/
+tina/utils/
+scripts/analysis/
+scripts/data/
+scripts/eval/run_eval_custom_tasks.py
+scripts/eval/run_eval_multi_seeds.py
+scripts/eval/eval_dd_filter_checkpoints.sh
+scripts/train/post_train_model_grpo.sh
+scripts/train/post_train_model_grpo_dd_filter.sh
+scripts/set/set_vars.sh
+recipes/
+docs/BRANCH_REUSE.md
+```
+
+This machine's portable additions:
+
+```text
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs2_paper_aligned.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_paper_aligned.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_repo_default.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_full_token_ablation.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_plan25_ablation.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_plan35_ablation.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_planscope_250.yaml
+scripts/eval/auto_eval_on_free_gpus.sh
+scripts/eval/eval_deepseek_base_multi_seed_gpu7.sh
+scripts/eval/eval_planner_sparse_checkpoint250_gpu67.sh
+scripts/eval/eval_planscope250_gpu67_seeds0_4.sh
+scripts/eval/eval_planscope250_single_gpu_seed.sh
+scripts/eval/wait_and_eval_planner_sparse_checkpoint250_gpu67.sh
+scripts/eval/wait_and_eval_planscope250_gpu3_seeds0_4.sh
+scripts/train/run_planner_sparse_ablation_gpu67.sh
+docs/ENVIRONMENT_SETUP_NOTES.md
+docs/EVAL_RESULTS_SUMMARY.md
+docs/PRIORITY_MULTI_SEED_EVAL_SUMMARY.md
+```
+
+Other machine portable additions now merged into the shared branch:
+
+```text
+scripts/analysis/
+scripts/data/
+tina/analysis/
+scripts/eval/eval_dd_filter_checkpoints.sh
+scripts/train/post_train_model_grpo_dd_filter.sh
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_limr_dd_filter.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs2_dd_filter.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_dd_filter.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_plan15_ablation.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_plan25.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_plan35.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_plan50_ablation.yaml
+recipes/DeepSeek-R1-Distill-Qwen-1.5B/grpo/train_model_open_rs3_scaffold_fulltoken_250.yaml
+```
+
+Machine-specific files are examples/runbooks. Reuse them by adapting GPU ids,
+paths, memory settings, and environment names:
+
+```text
+scripts/local/
+docs/ENVIRONMENT_SETUP_NOTES.md
+docs/EVAL_RESULTS_SUMMARY.md
+docs/PRIORITY_MULTI_SEED_EVAL_SUMMARY.md
+```
+
+Runtime artifacts remain local and are not synchronized through Git:
+
+```text
+ckpts/
+datasets/
+outputs/
+logs/
+.cache/
+wandb/
+scratch/
+```
+
+The only exception is that small manifest or summary Markdown files may be
+committed when they are useful for cross-machine comparison.
+
+## 0.2 Conflict Resolution Log
+
+The merge commit `683f2f5` resolved these implementation conflicts:
+
+| Area | Resolution |
+| --- | --- |
+| GitHub remote | Pushed to `git@github.com:seedsaw/Tina.git` because this machine's SSH key authenticates as `seedsaw`. The `shangshang-wang/Tina` remote is kept as upstream reference only. |
+| `.gitignore` | Kept artifact ignores from both machines and added `scratch/` plus `scripts/set/local_vars.sh`. |
+| `scripts/set/set_vars.sh` | Kept repo-location path discovery, conda CUDA env exports, and secret-safe token loading from environment or untracked `local_vars.sh`; removed committed token values and `TODO` token defaults. |
+| `docs/BRANCH_REUSE.md` | Rewritten as the shared handoff document for both machines. |
+| Plan-prefix config names | Kept support for both spellings: `token_loss_mask_type` / `plan_format_anchor_radius` / `plan_answer_anchor_tokens` and backward-compatible `token_loss_mask` / `format_anchor_width` / `answer_anchor_width`. |
+| `tina/post_train_hf/grpo_trainer.py` | Used the other machine's text-offset phase weighting implementation as the base, then added backward-compatible aliases and the PlanScope requirement that `kl_all_tokens=true`. |
+| `tina/post_train_hf/grpo.py` | Kept tokenizer-aware `get_plan_format_reward`, local JSON dataset path support, Open-RS prompt detection, PlanScope system prompt appendix, `TINA_STOP_AT_STEP`, and safe `push_to_hub=false` handling. |
+| `tina/utils/constant.py` | Preserved all dataset keys from both machines: filtered-data keys, `open_rs3_plan15/25/35/50`, local `open_rs3_*_ablation`, `open_rs3_repo_default`, and `open_rs3_planscope_250`. |
+| `train_model_open_rs3_planscope_250.yaml` | Kept the portable recipe settings from this machine (`cuda:0`, lower vLLM memory, batch size 6, `cosine_max_len`, PlanScope weights). Machine-specific variants should live under `scripts/local/`. |
+| `scripts/train/post_train_model_grpo.sh` | Generalized the Open-RS conditional to `open_rs3*` so future Open-RS3 variants get `cosine_max_len 3584`. |
+
+Validation run after merge:
+
+```bash
+bash -n scripts/set/set_vars.sh scripts/train/post_train_model_grpo.sh \
+  scripts/train/post_train_model_grpo_dd_filter.sh \
+  scripts/eval/eval_dd_filter_checkpoints.sh \
+  scripts/eval/auto_eval_on_free_gpus.sh \
+  scripts/eval/eval_deepseek_base_multi_seed_gpu7.sh \
+  scripts/eval/eval_planner_sparse_checkpoint250_gpu67.sh \
+  scripts/eval/eval_planscope250_gpu67_seeds0_4.sh \
+  scripts/eval/eval_planscope250_single_gpu_seed.sh \
+  scripts/eval/wait_and_eval_planner_sparse_checkpoint250_gpu67.sh \
+  scripts/eval/wait_and_eval_planscope250_gpu3_seeds0_4.sh
+
+python -m py_compile \
+  tina/config.py \
+  tina/post_train_hf/callback.py \
+  tina/post_train_hf/grpo.py \
+  tina/post_train_hf/grpo_config.py \
+  tina/post_train_hf/grpo_trainer.py \
+  tina/post_train_hf/preprocess.py \
+  tina/post_train_hf/rewards.py \
+  tina/utils/constant.py \
+  scripts/data/probe_desirable_difficulty.py \
+  scripts/data/merge_desirable_difficulty_shards.py \
+  scripts/eval/run_eval_custom_tasks.py \
+  scripts/eval/run_eval_multi_seeds.py \
+  scripts/analysis/analyze_plan_blocks.py \
+  scripts/analysis/compare_rollouts.py \
+  scripts/analysis/analyze_token_signals.py \
+  scripts/analysis/select_diagnostic_cases_from_lighteval.py
+```
+
 ## 1. Push This Branch to Your Fork
 
 Use a fork remote when your SSH key authenticates as that fork owner. On this
@@ -100,12 +255,30 @@ scripts/set/local_vars.sh
 
 ## 2. Reuse on Another Machine
 
-Clone the fork and check out the branch:
+For a fresh checkout, clone the fork and check out the branch:
 
 ```bash
 git clone git@github.com:seedsaw/Tina.git
 cd Tina
 git checkout analysis/offline-diagnostics
+```
+
+For an existing checkout on the other machine:
+
+```bash
+cd /path/to/Tina
+git remote add seedsaw git@github.com:seedsaw/Tina.git 2>/dev/null || \
+  git remote set-url seedsaw git@github.com:seedsaw/Tina.git
+git fetch seedsaw
+git checkout analysis/offline-diagnostics
+git pull --ff-only seedsaw analysis/offline-diagnostics
+git log --oneline --decorate --graph -n 12
+```
+
+After sync, the top commit should be:
+
+```text
+683f2f5 Merge reusable diagnostics from seedsaw branch
 ```
 
 Set up the environment using the target machine's own CUDA, Python, and package
@@ -294,6 +467,23 @@ Preferred workflow:
 git status --short
 git fetch --all --prune
 git log --oneline --decorate --graph --all -n 30
+git merge seedsaw/analysis/offline-diagnostics
+```
+
+If the other machine only needs to consume the newest fork code and has no
+local commits, prefer fast-forward sync:
+
+```bash
+git fetch seedsaw
+git checkout analysis/offline-diagnostics
+git pull --ff-only seedsaw analysis/offline-diagnostics
+```
+
+If the other machine has local commits, inspect before merging:
+
+```bash
+git log --oneline --decorate --graph --all -n 30
+git diff --name-status HEAD..seedsaw/analysis/offline-diagnostics
 git merge seedsaw/analysis/offline-diagnostics
 ```
 
