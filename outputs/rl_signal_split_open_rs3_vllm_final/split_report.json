@@ -1,0 +1,190 @@
+{
+  "dataset": {
+    "total_samples": 7000,
+    "valid_samples": 7000,
+    "mean_pass_rate": 0.083625,
+    "mean_reward_mean": 0.08357857142857143,
+    "mean_reward_std": 0.08799885199046208,
+    "mean_length_tokens": 1808.836267857143,
+    "mean_format_valid_rate": 0.9997678571428571
+  },
+  "splits": [
+    {
+      "split": "easy",
+      "size": 257,
+      "unique_size": 257,
+      "mean_pass_rate": 0.8574902723735408,
+      "mean_reward_mean": 0.8574902723735408,
+      "mean_reward_std": 0.2828310444556585,
+      "mean_length_tokens": 1106.431420233463,
+      "mean_answer_diversity": 0.2490272373540856,
+      "mean_format_valid_rate": 1.0
+    },
+    {
+      "split": "medium",
+      "size": 766,
+      "unique_size": 766,
+      "mean_pass_rate": 0.385443864229765,
+      "mean_reward_mean": 0.385443864229765,
+      "mean_reward_std": 0.4674909289175151,
+      "mean_length_tokens": 1476.8113577023498,
+      "mean_answer_diversity": 0.5691906005221932,
+      "mean_format_valid_rate": 1.0
+    },
+    {
+      "split": "hard",
+      "size": 5977,
+      "unique_size": 5977,
+      "mean_pass_rate": 0.011669733980257654,
+      "mean_reward_mean": 0.011615358875690146,
+      "mean_reward_std": 0.030986503924596582,
+      "mean_length_tokens": 1881.590011711561,
+      "mean_answer_diversity": 0.7878534381796888,
+      "mean_format_valid_rate": 0.9997281244771624
+    },
+    {
+      "split": "high_variance",
+      "size": 2100,
+      "unique_size": 2100,
+      "mean_pass_rate": 0.24541666666666667,
+      "mean_reward_mean": 0.24539285714285713,
+      "mean_reward_std": 0.2930265487490673,
+      "mean_length_tokens": 1629.2960119047618,
+      "mean_answer_diversity": 0.7093452380952381,
+      "mean_format_valid_rate": 0.9998809523809524
+    },
+    {
+      "split": "long_reasoning",
+      "size": 1750,
+      "unique_size": 1750,
+      "mean_pass_rate": 0.010285714285714285,
+      "mean_reward_mean": 0.010228571428571429,
+      "mean_reward_std": 0.017386015286608124,
+      "mean_length_tokens": 2048.0,
+      "mean_answer_diversity": 0.8163571428571429,
+      "mean_format_valid_rate": 0.9997142857142857
+    },
+    {
+      "split": "core_medium",
+      "size": 383,
+      "unique_size": 383,
+      "mean_pass_rate": 0.37761096605744127,
+      "mean_reward_mean": 0.37761096605744127,
+      "mean_reward_std": 0.4660411784271814,
+      "mean_length_tokens": 1700.3064621409922,
+      "mean_answer_diversity": 0.5819190600522193,
+      "mean_format_valid_rate": 1.0
+    },
+    {
+      "split": "mixed_balanced",
+      "size": 2000,
+      "unique_size": 2000,
+      "mean_pass_rate": 0.209,
+      "mean_reward_mean": 0.2089625,
+      "mean_reward_std": 0.16999975611758963,
+      "mean_length_tokens": 1736.713625,
+      "mean_answer_diversity": 0.673875,
+      "mean_format_valid_rate": 0.9998125
+    }
+  ],
+  "overlaps": {
+    "easy": {
+      "medium": 0,
+      "hard": 0,
+      "high_variance": 187,
+      "long_reasoning": 3,
+      "core_medium": 0,
+      "mixed_balanced": 257
+    },
+    "medium": {
+      "easy": 0,
+      "hard": 0,
+      "high_variance": 766,
+      "long_reasoning": 29,
+      "core_medium": 383,
+      "mixed_balanced": 468
+    },
+    "hard": {
+      "easy": 0,
+      "medium": 0,
+      "high_variance": 1147,
+      "long_reasoning": 1718,
+      "core_medium": 0,
+      "mixed_balanced": 1275
+    },
+    "high_variance": {
+      "easy": 187,
+      "medium": 766,
+      "hard": 1147,
+      "long_reasoning": 481,
+      "core_medium": 383,
+      "mixed_balanced": 1007
+    },
+    "long_reasoning": {
+      "easy": 3,
+      "medium": 29,
+      "hard": 1718,
+      "high_variance": 481,
+      "core_medium": 29,
+      "mixed_balanced": 561
+    },
+    "core_medium": {
+      "easy": 0,
+      "medium": 383,
+      "hard": 0,
+      "high_variance": 383,
+      "long_reasoning": 29,
+      "mixed_balanced": 383
+    },
+    "mixed_balanced": {
+      "easy": 257,
+      "medium": 468,
+      "hard": 1275,
+      "high_variance": 1007,
+      "long_reasoning": 561,
+      "core_medium": 383
+    }
+  },
+  "thresholds": {
+    "reward_std_top30": 0.0,
+    "correctness_entropy_top30": 0.0,
+    "answer_diversity_top30": 0.875,
+    "length_p90_top25": 2048.0,
+    "length_mean_top25": 2048.0,
+    "reward_std_top20": 0.33071891388307384,
+    "length_mean_top10": 2048.0,
+    "variance_score_top30": 0.3333333333333333,
+    "long_reasoning_score_top25": 1.0
+  },
+  "warnings": [],
+  "training_advice": [
+    "medium split is small; the dataset may be too easy or too hard for the reference model, reducing dense RL learning signal.",
+    "hard split is large; expect sparse rewards and consider curriculum, stronger verifier feedback, or mixing easier samples."
+  ],
+  "score_formulas": {
+    "difficulty_score": "1 - pass_rate",
+    "variance_score": "mean(robust_percentile_norm(reward_std), robust_percentile_norm(answer_diversity), robust_percentile_norm(correctness_entropy))",
+    "long_reasoning_score": "mean(robust_percentile_norm(length_mean_tokens), robust_percentile_norm(length_p90_tokens))",
+    "instability_score": "mean(variance_score, robust_percentile_norm(invalid_count), robust_percentile_norm(completion_length_cv))",
+    "robust_percentile_norm": "clip((x - dataset_p5) / max(dataset_p95 - dataset_p5, eps), 0, 1)"
+  },
+  "reproducibility": {
+    "input": "/root/Tina/.cache/huggingface/hub/datasets--knoveleng--open-rs/snapshots/8de2b2d11162d97b45c7606902eae2bb1ff629b4/data/train-00000-of-00001.parquet",
+    "model": "/root/Tina/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-R1-Distill-Qwen-1.5B/snapshots/ad9f0ae0864d7fbcd1cd905e3c6c5b069cc8b562",
+    "seed": 42,
+    "n_samples": 8,
+    "max_new_tokens": 2048,
+    "max_prompt_tokens": 512,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "finalized_from_shards": [
+      "outputs/rl_signal_split_open_rs3_vllm_shard0",
+      "outputs/rl_signal_split_open_rs3_vllm_shard1"
+    ],
+    "timestamp_utc": "2026-05-14T09:30:28.686400+00:00",
+    "git_commit": "unavailable"
+  },
+  "visualizations": [
+    "split_visualization.png"
+  ]
+}
