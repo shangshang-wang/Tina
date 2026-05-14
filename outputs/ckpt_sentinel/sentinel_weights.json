@@ -1,0 +1,769 @@
+{
+  "benchmark_weights": {
+    "aime24": 1.0,
+    "aime25": 1.0,
+    "amc23": 1.0,
+    "math500": 1.0,
+    "gpqa": 1.0,
+    "minerva": 1.0
+  },
+  "aggregation": "mean_of_benchmark_scores",
+  "item_weight_policy": {
+    "base_wrong_baseline_right": 1.2,
+    "base_right_baseline_wrong": 1.0,
+    "both_wrong": 1.0,
+    "both_right": 0.5
+  },
+  "item_weights": {
+    "aime24:1": {
+      "weight": 1.0,
+      "benchmark": "aime24",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "aime24:14": {
+      "weight": 1.0,
+      "benchmark": "aime24",
+      "improvement_tag": "both_wrong"
+    },
+    "aime24:25": {
+      "weight": 1.2,
+      "benchmark": "aime24",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "aime24:27": {
+      "weight": 0.5,
+      "benchmark": "aime24",
+      "improvement_tag": "both_right"
+    },
+    "aime24:4": {
+      "weight": 1.0,
+      "benchmark": "aime24",
+      "improvement_tag": "both_wrong"
+    },
+    "aime24:8": {
+      "weight": 1.0,
+      "benchmark": "aime24",
+      "improvement_tag": "both_wrong"
+    },
+    "aime25:11": {
+      "weight": 1.0,
+      "benchmark": "aime25",
+      "improvement_tag": "both_wrong"
+    },
+    "aime25:14": {
+      "weight": 0.5,
+      "benchmark": "aime25",
+      "improvement_tag": "both_right"
+    },
+    "aime25:16": {
+      "weight": 1.0,
+      "benchmark": "aime25",
+      "improvement_tag": "both_wrong"
+    },
+    "aime25:18": {
+      "weight": 1.2,
+      "benchmark": "aime25",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "aime25:24": {
+      "weight": 1.2,
+      "benchmark": "aime25",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "aime25:3": {
+      "weight": 1.0,
+      "benchmark": "aime25",
+      "improvement_tag": "both_wrong"
+    },
+    "amc23:11": {
+      "weight": 1.2,
+      "benchmark": "amc23",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "amc23:13": {
+      "weight": 1.0,
+      "benchmark": "amc23",
+      "improvement_tag": "both_wrong"
+    },
+    "amc23:21": {
+      "weight": 1.0,
+      "benchmark": "amc23",
+      "improvement_tag": "both_wrong"
+    },
+    "amc23:3": {
+      "weight": 1.0,
+      "benchmark": "amc23",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "amc23:31": {
+      "weight": 1.0,
+      "benchmark": "amc23",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "amc23:32": {
+      "weight": 0.5,
+      "benchmark": "amc23",
+      "improvement_tag": "both_right"
+    },
+    "amc23:33": {
+      "weight": 1.0,
+      "benchmark": "amc23",
+      "improvement_tag": "both_wrong"
+    },
+    "amc23:35": {
+      "weight": 1.2,
+      "benchmark": "amc23",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "amc23:39": {
+      "weight": 1.0,
+      "benchmark": "amc23",
+      "improvement_tag": "both_wrong"
+    },
+    "amc23:7": {
+      "weight": 1.2,
+      "benchmark": "amc23",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "amc23:8": {
+      "weight": 1.2,
+      "benchmark": "amc23",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "amc23:9": {
+      "weight": 1.0,
+      "benchmark": "amc23",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:10": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:111": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:122": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:132": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:138": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:143": {
+      "weight": 0.5,
+      "benchmark": "math500",
+      "improvement_tag": "both_right"
+    },
+    "math500:151": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:162": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:163": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:179": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:187": {
+      "weight": 0.5,
+      "benchmark": "math500",
+      "improvement_tag": "both_right"
+    },
+    "math500:188": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:201": {
+      "weight": 0.5,
+      "benchmark": "math500",
+      "improvement_tag": "both_right"
+    },
+    "math500:203": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:225": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:237": {
+      "weight": 0.5,
+      "benchmark": "math500",
+      "improvement_tag": "both_right"
+    },
+    "math500:238": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:251": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:253": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:265": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:291": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:307": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:325": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:338": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:358": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:384": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:387": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:388": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:390": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:402": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:405": {
+      "weight": 0.5,
+      "benchmark": "math500",
+      "improvement_tag": "both_right"
+    },
+    "math500:408": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:41": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:412": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:416": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:42": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:426": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:431": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:435": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:436": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:449": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:465": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:47": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "math500:473": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:476": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:477": {
+      "weight": 0.5,
+      "benchmark": "math500",
+      "improvement_tag": "both_right"
+    },
+    "math500:492": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:50": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:51": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:54": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:58": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:70": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:80": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:83": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "math500:85": {
+      "weight": 1.2,
+      "benchmark": "math500",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "math500:96": {
+      "weight": 1.0,
+      "benchmark": "math500",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:1": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:108": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:113": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:125": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:134": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:142": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:145": {
+      "weight": 0.5,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_right"
+    },
+    "gpqa:154": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:157": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:163": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:167": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "gpqa:168": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:17": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:171": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:180": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:181": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:184": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:194": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:20": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "gpqa:3": {
+      "weight": 0.5,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_right"
+    },
+    "gpqa:32": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:33": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "gpqa:35": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:57": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:60": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "gpqa:7": {
+      "weight": 0.5,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_right"
+    },
+    "gpqa:73": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:75": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:8": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_wrong"
+    },
+    "gpqa:83": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:87": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:89": {
+      "weight": 1.0,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "gpqa:92": {
+      "weight": 0.5,
+      "benchmark": "gpqa",
+      "improvement_tag": "both_right"
+    },
+    "gpqa:96": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "gpqa:99": {
+      "weight": 1.2,
+      "benchmark": "gpqa",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:102": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:108": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "minerva:109": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:121": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:130": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:133": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:135": {
+      "weight": 0.5,
+      "benchmark": "minerva",
+      "improvement_tag": "both_right"
+    },
+    "minerva:147": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:15": {
+      "weight": 0.5,
+      "benchmark": "minerva",
+      "improvement_tag": "both_right"
+    },
+    "minerva:150": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "minerva:156": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:165": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:190": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:192": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:213": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:214": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:219": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:221": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:223": {
+      "weight": 0.5,
+      "benchmark": "minerva",
+      "improvement_tag": "both_right"
+    },
+    "minerva:231": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:233": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:237": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:24": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:25": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:254": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:258": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:26": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:267": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "minerva:39": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "minerva:51": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:65": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "base_right_baseline_wrong"
+    },
+    "minerva:85": {
+      "weight": 1.0,
+      "benchmark": "minerva",
+      "improvement_tag": "both_wrong"
+    },
+    "minerva:89": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:96": {
+      "weight": 1.2,
+      "benchmark": "minerva",
+      "improvement_tag": "base_wrong_baseline_right"
+    },
+    "minerva:99": {
+      "weight": 0.5,
+      "benchmark": "minerva",
+      "improvement_tag": "both_right"
+    }
+  }
+}
