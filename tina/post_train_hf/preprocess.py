@@ -1,18 +1,7 @@
 import random
 
-PLAN_SCAFFOLD_INSTRUCTION = (
-    "Before solving, write a short high-level strategy inside exactly one <plan>...</plan> block. "
-    "Keep the plan concise, then continue with the solution."
-)
 
-def _maybe_add_plan_scaffold(system_prompt: str, use_plan_scaffold: bool) -> str:
-    if not use_plan_scaffold:
-        return system_prompt
-    return f"{system_prompt.rstrip()}\n{PLAN_SCAFFOLD_INSTRUCTION}"
-
-
-def make_conv_for_grpo(example, system_prompt, use_plan_scaffold=False):
-    system_prompt = _maybe_add_plan_scaffold(system_prompt, use_plan_scaffold)
+def make_conv_for_grpo(example, system_prompt):
     return {
         "prompt": [
             {"role": "system", "content": system_prompt},
@@ -20,9 +9,8 @@ def make_conv_for_grpo(example, system_prompt, use_plan_scaffold=False):
         ]
     }
 
-def make_conv_for_grpo_l1(example, system_prompt, min_length, max_length, use_plan_scaffold=False):
+def make_conv_for_grpo_l1(example, system_prompt, min_length, max_length):
     target_length = random.randint(min_length, max_length)
-    system_prompt = _maybe_add_plan_scaffold(system_prompt, use_plan_scaffold)
     system_prompt += f"\nThink for {target_length} tokens."
     return {
         "target_length": target_length,

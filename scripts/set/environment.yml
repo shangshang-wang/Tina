@@ -1,9 +1,7 @@
 name: tina
 channels:
-  - nvidia/label/cuda-11.8.0
-  - pytorch
+  - https://conda.anaconda.org/nvidia/label/cuda-11.8.0
   - conda-forge
-  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
 dependencies:
   - _libgcc_mutex=0.1=main
   - _openmp_mutex=5.1=1_gnu
@@ -129,7 +127,6 @@ dependencies:
       - fastapi==0.115.12
       - filelock==3.18.0
       - fire==0.7.0
-      - flash-attn==2.7.3
       - flask==3.1.0
       - fonttools==4.57.0
       - frozenlist==1.5.0

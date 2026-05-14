@@ -69,28 +69,6 @@ def format_reward(completions, **kwargs):
     return [count_tags(c) for c in contents]
 
 
-def plan_format_reward(completions, plan_min_tokens: int = 8, plan_max_tokens: int = 128, **kwargs):
-    """Reward exactly one <plan>...</plan> block with a reasonable whitespace-token length."""
-
-    def score(text: str) -> float:
-        if text.count("<plan>") != 1 or text.count("</plan>") != 1:
-            return 0.0
-
-        start = text.find("<plan>")
-        end = text.find("</plan>")
-        if end <= start:
-            return 0.0
-
-        plan = text[start + len("<plan>") : end].strip()
-        plan_tokens = len(plan.split())
-        if plan_min_tokens <= plan_tokens <= plan_max_tokens:
-            return 1.0
-        return 0.0
-
-    contents = [completion[0]["content"] for completion in completions]
-    return [score(c) for c in contents]
-
-
 def tag_count_reward(completions, **kwargs) -> list[float]:
     """Reward function that checks if we produce the desired number of think and answer tags associated with `format_reward()`.
 
@@ -107,40 +85,6 @@ def tag_count_reward(completions, **kwargs) -> list[float]:
 
     contents = [completion[0]["content"] for completion in completions]
     return [count_tags(c) for c in contents]
-
-
-def get_plan_format_reward(tokenizer=None, min_tokens: int = 4, max_tokens: int = 96):
-    """Reward exactly one concise <plan>...</plan> block in each completion."""
-
-    def plan_format_reward(completions, **kwargs):
-        contents = [completion[0]["content"] for completion in completions]
-        rewards = []
-        for content in contents:
-            if content.count("<plan>") != 1 or content.count("</plan>") != 1:
-                rewards.append(0.0)
-                continue
-
-            plan_start = content.find("<plan>")
-            plan_end = content.find("</plan>")
-            if plan_start > plan_end:
-                rewards.append(0.0)
-                continue
-
-            plan_text = content[plan_start + len("<plan>"):plan_end].strip()
-            if not plan_text:
-                rewards.append(0.0)
-                continue
-
-            if tokenizer is not None:
-                plan_len = len(tokenizer(plan_text, add_special_tokens=False).input_ids)
-            else:
-                plan_len = len(plan_text.split())
-            rewards.append(float(min_tokens <= plan_len <= max_tokens))
-
-        return rewards
-
-    plan_format_reward.__name__ = "plan_format_reward"
-    return plan_format_reward
 
 
 def reasoning_steps_reward(completions, **kwargs):

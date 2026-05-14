@@ -15,13 +15,11 @@ echo ""
 
 BASE_MODEL_NAME="DeepSeek-R1-Distill-Qwen-1.5B" # Qwen2.5-1.5B, Qwen2.5-Math-1.5B
 PT_TYPE="grpo"
-PT_CONFIG_NAME="${PT_CONFIG_NAME:-still}"
+PT_CONFIG_NAME="still"
 # main: still, deepscaler, 2thought, fastcurl, l1_exact, l1_max, open_rs3, open_rs2, open_rs1
 # extra: limr, open_r1, thoughts
 # ablation: limr_large_lr_ablation, limr_small_lr_ablation, limr_large_rank_ablation, limr_medium_rank_ablation, limr_small_rank_ablation, limr_tiny_rank_ablation
 # open_rs3_drgrpo_ablation, open_rs3_format_ablation, open_rs3_long_completion_ablation
-# planner-token sparse loss: open_rs3_full_token_ablation, open_rs3_plan25_ablation, open_rs3_plan35_ablation
-# PlanScope-GRPO: open_rs3_planscope_250
 
 PY_SCRIPT="./tina/post_train_hf/grpo.py"
 PY_CONFIG="./recipes/${BASE_MODEL_NAME}/${PT_TYPE}/train_model_${PT_CONFIG_NAME}.yaml"
@@ -31,7 +29,7 @@ echo ""
 echo "Running ${PY_SCRIPT} on model ${BASE_MODEL_NAME} with dataset ${PT_CONFIG_NAME} via ${PT_TYPE}"
 echo ""
 
-if [[ "${PT_CONFIG_NAME}" == "thoughts" || "${PT_CONFIG_NAME}" == "open_r1" || "${PT_CONFIG_NAME}" == open_rs3* ]]; then
+if [[ "${PT_CONFIG_NAME}" == "thoughts" || "${PT_CONFIG_NAME}" == "open_r1" || "${PT_CONFIG_NAME}" == "open_rs3" || "${PT_CONFIG_NAME}" == "open_rs3_drgrpo_ablation" ]]; then
     ACCELERATE_LOG_LEVEL=info accelerate launch \
         --config_file "${ACCELERATE_DS_CONFIG}" \
         --main_process_port=29500 \

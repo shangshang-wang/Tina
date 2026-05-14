@@ -1,5 +1,4 @@
 import os
-import random
 import lighteval
 import torch
 from lighteval.logging.evaluation_tracker import EvaluationTracker
@@ -48,8 +47,6 @@ def parse_args():
 def main():
     start = datetime.now()
     args = parse_args()
-    random.seed(args.seed)
-    torch.manual_seed(args.seed)
     fs, output_dir = url_to_fs(args.output_dir)
 
     max_model_length = args.max_model_length

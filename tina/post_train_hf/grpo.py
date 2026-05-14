@@ -9,7 +9,7 @@ import random
 import sys
 import torch
 import transformers
-from transformers import set_seed, AutoModelForCausalLM, AutoTokenizer, TrainerCallback
+from transformers import set_seed, AutoModelForCausalLM, AutoTokenizer
 from transformers.trainer_utils import get_last_checkpoint
 
 from trl import ModelConfig, TrlParser # GRPOTrainer, GRPOConfig
@@ -22,7 +22,6 @@ from tina.post_train_hf.preprocess import make_conv_for_grpo, make_conv_for_grpo
 from tina.post_train_hf.rewards import (
     accuracy_reward,
     format_reward,
-    get_plan_format_reward,
     tag_count_reward,
     len_reward,
     len_reward_l1_exact,
@@ -32,17 +31,7 @@ from tina.post_train_hf.rewards import (
     get_repetition_penalty_reward)
 from tina.utils.chat_template import DEFAULT_CHAT_TEMPLATE, REASON_CHAT_TEMPLATE
 from tina.utils.constant import RL_POST_TRAIN_CONFIG_MAP
-from tina.utils.prompt import OPEN_R1_SYSTEM_PROMPT, OPEN_RS_SYSTEM_PROMPT, PLAN_SCOPE_SYSTEM_APPENDIX
-
-
-class StopAtStepCallback(TrainerCallback):
-    def __init__(self, stop_at_step: int):
-        self.stop_at_step = stop_at_step
-
-    def on_step_end(self, args, state, control, **kwargs):
-        if self.stop_at_step > 0 and state.global_step >= self.stop_at_step:
-            control.should_training_stop = True
-        return control
+from tina.utils.prompt import OPEN_R1_SYSTEM_PROMPT, OPEN_RS_SYSTEM_PROMPT
 
 
 def main():
@@ -109,18 +98,11 @@ def main():
         tokenizer.pad_token = "<|fim_pad|>"
     tokenizer.chat_template = REASON_CHAT_TEMPLATE
 
-    if pt_args.model_post_train_dataset_path is not None:
-        model_post_train_dataset_name = pt_args.model_post_train_dataset_path
-        train_dataset_path = pt_args.model_post_train_dataset_path
-        if not os.path.isabs(train_dataset_path):
-            train_dataset_path = os.path.join(os.environ.get("PROJECT_DIR", os.getcwd()), train_dataset_path)
-        train_dataset = load_dataset("json", data_files=train_dataset_path, split="train")
+    model_post_train_dataset_name = RL_POST_TRAIN_CONFIG_MAP[pt_args.model_post_train_dataset_name]
+    if pt_args.model_post_train_dataset_config is not None:
+        train_dataset = load_dataset(model_post_train_dataset_name, split="train", name=pt_args.model_post_train_dataset_config)
     else:
-        model_post_train_dataset_name = RL_POST_TRAIN_CONFIG_MAP[pt_args.model_post_train_dataset_name]
-        if pt_args.model_post_train_dataset_config is not None:
-            train_dataset = load_dataset(model_post_train_dataset_name, split="train", name=pt_args.model_post_train_dataset_config)
-        else:
-            train_dataset = load_dataset(model_post_train_dataset_name, split="train")
+        train_dataset = load_dataset(model_post_train_dataset_name, split="train")
     # required by GRPOTrainer: (prompt, solution) columns
     if 'solution' not in train_dataset.column_names and 'answer' in train_dataset.column_names:
         train_dataset = train_dataset.rename_column('answer', 'solution')
@@ -167,13 +149,7 @@ def main():
         train_dataset = train_dataset.map(extract_solution)
 
 
-    is_open_rs_dataset = (
-        "open-rs" in model_post_train_dataset_name
-        or "open_rs" in pt_args.model_post_train_dataset_name
-    )
-    SYSTEM_PROMPT = OPEN_RS_SYSTEM_PROMPT if is_open_rs_dataset else OPEN_R1_SYSTEM_PROMPT
-    if training_args.use_plan_scaffold:
-        SYSTEM_PROMPT = SYSTEM_PROMPT.rstrip() + "\n" + PLAN_SCOPE_SYSTEM_APPENDIX.strip() + "\n"
+    SYSTEM_PROMPT = OPEN_RS_SYSTEM_PROMPT if "open-rs" in model_post_train_dataset_name else OPEN_R1_SYSTEM_PROMPT
 
     if "l1" in pt_args.model_post_train_dataset_name:
         # uniformly sample a target length between 100 and 4000
@@ -181,19 +157,11 @@ def main():
         max_length = 4000
         train_dataset = train_dataset.map(
             make_conv_for_grpo_l1,
-            fn_kwargs={
-                "system_prompt": SYSTEM_PROMPT,
-                "min_length": min_length,
-                "max_length": max_length,
-                "use_plan_scaffold": training_args.use_plan_scaffold,
-            })
+            fn_kwargs={"system_prompt": SYSTEM_PROMPT, "min_length": min_length, "max_length": max_length})
     else:
         train_dataset = train_dataset.map(
             make_conv_for_grpo,
-            fn_kwargs={
-                "system_prompt": SYSTEM_PROMPT,
-                "use_plan_scaffold": training_args.use_plan_scaffold,
-            })
+            fn_kwargs={"system_prompt": SYSTEM_PROMPT})
 
     ######################
     # Initialize the model
@@ -224,11 +192,6 @@ def main():
     RL_POST_TRAIN_REWARD_MAP = {
         "accuracy": accuracy_reward,
         "format": format_reward,
-        "plan_format": get_plan_format_reward(
-            tokenizer=tokenizer,
-            min_tokens=training_args.plan_min_tokens,
-            max_tokens=training_args.plan_max_tokens,
-        ),
         "tag_count": tag_count_reward,
         "length": len_reward,
         "length_l1_exact": len_reward_l1_exact,
@@ -261,11 +224,6 @@ def main():
             # PushToHubRevisionCallback(dataset_name=pt_args.model_post_train_dataset_name, use_peft=model_args.use_peft)
         ]
 
-    stop_at_step = int(os.environ.get("TINA_STOP_AT_STEP", "0") or "0")
-    if stop_at_step > 0:
-        logger.info(f"\nStopping training at step {stop_at_step}; scheduler max_steps remains {training_args.max_steps}.")
-        callbacks.append(StopAtStepCallback(stop_at_step))
-
     trainer = GRPOTrainer(
         model=model,
         processing_class=tokenizer,
@@ -296,10 +254,7 @@ def main():
     trainer.log_metrics("train", train_metrics)
     trainer.save_metrics("train", train_metrics)
     trainer.save_state()
-    if training_args.push_to_hub:
-        trainer.push_to_hub(commit_message=f"Add checkpoint {training_args.max_steps} post-trained on {pt_args.model_post_train_dataset_name}")
-    else:
-        logger.info("\nSkipping push_to_hub because push_to_hub is false.")
+    trainer.push_to_hub(commit_message=f"Add checkpoint {training_args.max_steps} post-trained on {pt_args.model_post_train_dataset_name}")
 
     del trainer
     torch.cuda.empty_cache()
